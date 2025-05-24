@@ -387,7 +387,7 @@ dap::ResponseOrError<dap::StackTraceResponse> ZScriptDebugger::GetStackTrace(con
 
 	for (uint32_t frameIndex = startFrame; frameIndex < frameNodes.size() && frameIndex < startFrame + levels; frameIndex++)
 	{
-		const auto node = dynamic_cast<StackFrameStateNode *>(frameNodes.at(frameIndex).get());
+		const auto node = std::dynamic_pointer_cast<StackFrameStateNode>(frameNodes.at(frameIndex));
 
 		dap::StackFrame frame;
 		if (!node->SerializeToProtocol(frame, m_pexCache.get()))
@@ -455,7 +455,7 @@ dap::ResponseOrError<dap::ScopesResponse> ZScriptDebugger::GetScopes(const dap::
 
 	for (const auto &frameScope : frameScopes)
 	{
-		auto asScopeSerializable = dynamic_cast<IProtocolScopeSerializable *>(frameScope.get());
+		auto asScopeSerializable = std::dynamic_pointer_cast<IProtocolScopeSerializable>(frameScope);
 		if (!asScopeSerializable)
 		{
 			continue;
@@ -489,9 +489,9 @@ dap::ResponseOrError<dap::VariablesResponse> ZScriptDebugger::GetVariables(const
 	bool only_indexed = request.filter.value("") == "indexed";
 	bool only_named = request.filter.value("") == "named";
 
-	for (int64_t i = 0; i < variableNodes.size(); i++)
+	for (size_t i = 0; i < variableNodes.size(); i++)
 	{
-		auto asVariableSerializable = dynamic_cast<IProtocolVariableSerializable *>(variableNodes.at(i).get());
+		auto asVariableSerializable = std::dynamic_pointer_cast<IProtocolVariableSerializable>(variableNodes.at(i));
 		if (!asVariableSerializable)
 		{
 			continue;

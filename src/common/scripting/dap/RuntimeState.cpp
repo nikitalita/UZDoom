@@ -59,7 +59,7 @@ bool RuntimeState::ResolveStateByPath(const std::string requestedPath, std::shar
 		const std::string &currentName,
 		std::shared_ptr<StateNodeBase> &part)
 	{
-		auto structured = dynamic_cast<IStructuredState *>(part.get());
+		auto structured = std::dynamic_pointer_cast<IStructuredState>(part);
 		auto currentPath = Join(currentPathElements, ".");
 		ToLower(currentPath);
 		if (structured)
@@ -176,7 +176,7 @@ bool RuntimeState::ResolveChildrenByParentPath(const std::string requestedPath, 
 		return false;
 	}
 
-	auto structured = dynamic_cast<IStructuredState *>(resolvedParent.get());
+	auto structured = std::dynamic_pointer_cast<IStructuredState>(resolvedParent);
 	if (!structured)
 	{
 		return false;
