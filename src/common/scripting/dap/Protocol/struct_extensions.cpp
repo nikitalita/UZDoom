@@ -31,6 +31,7 @@ DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
 	DAP_FIELD(name, "name"),
 	DAP_FIELD(type, "type"),
 	DAP_FIELD(request, "request"),
+	DAP_FIELD(projects, "projects"),
 	DAP_FIELD(projectSources, "projectSources"));
 
 DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
@@ -40,5 +41,13 @@ DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
 	DAP_FIELD(name, "name"),
 	DAP_FIELD(type, "type"),
 	DAP_FIELD(request, "request"),
+	DAP_FIELD(projects, "projects"),
 	DAP_FIELD(projectSources, "projectSources"));
+
+DAP_IMPLEMENT_STRUCT_TYPEINFO(
+	GZDoomProject,
+	"GZDoomProject",
+	DAP_FIELD(path, "path"),
+	DAP_FIELD(archive, "archive"));
+
 }
