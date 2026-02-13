@@ -11,7 +11,7 @@
 #include "Nodes/StateNodeBase.h"
 #include "Nodes/CVarScopeStateNode.h"
 #include "common/scripting/dap/Nodes/LocalScopeStateNode.h"
-
+#include "DynamicEval.h"
 
 // This is the main class that handles the debug session and the debug requests/responses and events
 
@@ -633,6 +633,20 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 	} else {
 		isNonVariableContext = true;
 	}
+
+	auto frameId = request.frameId.value(0);
+	std::shared_ptr<StateNodeBase> _frameNode;
+	VMFrame * frame = nullptr;
+	std::shared_ptr<StackFrameStateNode> frameNode;
+	if(frameId > 0 && m_runtimeState->ResolveStateById(frameId, _frameNode)){
+		frameNode = std::dynamic_pointer_cast<StackFrameStateNode>(_frameNode);
+		if (!frameNode){
+			RETURN_DAP_ERROR(StringFormat("Could not find frameId %d", frameId).c_str());
+		}
+		frame = frameNode->GetStackFrame();
+	}
+
+
 	if (context == "variables" || context == "hover" || context == "watch" || (context == "repl" && m_executionManager->IsPaused()))
 	{
 		int64_t frameId = request.frameId.value(0);
@@ -728,6 +742,9 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 			response.memoryReference = variable.memoryReference;
 			return response;
 		}
+	}
+	if (context != "variables" && context != "hover"){
+		return DoDynamicEval(request.expression, frame, m_pexCache);
 	}
 
 	if (context == "repl" && !m_executionManager->IsPaused())

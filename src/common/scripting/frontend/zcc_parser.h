@@ -702,4 +702,5 @@ ZCC_TreeNode *TreeNodeDeepCopy(ZCC_AST *ast, ZCC_TreeNode *orig, bool copySiblin
 // Main entry point for the parser. Returns some data needed by the compiler.
 PNamespace* ParseOneScript(const int baselump, ZCCParseState& state);
 
+void ParseSingleExpression(const char *expr, ZCCParseState &state);
 #endif

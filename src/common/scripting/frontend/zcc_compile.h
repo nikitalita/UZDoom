@@ -109,7 +109,8 @@ public:
 	virtual ~ZCCCompiler();
 	virtual int Compile();
 
-protected:
+// TODO: CHANGE THIS BACK TO PROTECTED
+public:
 	const char * GetStringConst(FxExpression *ex, FCompileContext &ctx);
 	virtual int CheckActionKeyword(ZCC_FuncDeclarator* f, uint32_t &varflags, int useflags, ZCC_StructWork *c) { return -1; } // stock implementation does not support this.
 	virtual bool PrepareMetaData(PClass *type) { return false; }

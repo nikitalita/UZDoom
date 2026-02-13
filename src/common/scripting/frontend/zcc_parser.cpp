@@ -562,6 +562,19 @@ static FString ZCCTokenName(int terminal)
 	return FScanner::TokenName(sc_token);
 }
 
+void ParseSingleExpression(const char *expr, ZCCParseState &state){
+	FScanner pSC;
+	pSC.OpenMem("expression", expr, strlen(expr));
+	auto parser = ZCCParseAlloc(malloc);
+	ParseSingleFile(&pSC, nullptr, -1, parser, state);
+	ZCCToken value;
+	value.Int = -1;
+	value.SourceLoc = pSC.GetMessageLine();
+	ZCCParse(parser, 0, value, &state);
+	pSC.Close();
+	ZCCParseFree(parser, free);
+}
+
 ZCC_TreeNode *ZCC_AST::InitNode(size_t size, EZCCTreeNodeType type, ZCC_TreeNode *basis)
 {
 	ZCC_TreeNode *node = (ZCC_TreeNode *)SyntaxArena.Alloc(size);

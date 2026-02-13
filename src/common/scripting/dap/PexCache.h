@@ -58,6 +58,7 @@ public:
 	size_t GetFunctionCount() const;
 	std::stack<FunctionLineMap::const_iterator> FindFunctionRangesByLine(int line) const;
 	std::stack<FunctionCodeMap::const_iterator> FindFunctionRangesByCode(void *address) const;
+	int GetScriptLump() const { return lump; }
 	int GetScriptRef() const { return scriptReference; }
 	bool HasFunctions() const;
 	bool HasFunctionLines() const;
