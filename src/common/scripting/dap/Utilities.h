@@ -257,14 +257,21 @@ inline std::string ToLowerCopy(const std::string &p_str)
 	return r_str;
 }
 
-inline std::string DemangleName(std::string name)
+inline std::string DemangleArchiveName(std::string &name)
 {
 	if (name.front() == ':')
 	{
-		return name.substr(2, name.length() - 6);
+		return name.substr(1, name.length() - 2);
 	}
 
 	return name;
+}
+
+inline std::string NormalizePath(const std::string &path)
+{
+	std::string normalizedPath = path;
+	std::transform(normalizedPath.begin(), normalizedPath.end(), normalizedPath.begin(), [](int c) { return c == '\\' ? '/' : c; });
+	return normalizedPath;
 }
 
 inline int GetScriptReference(const std::string &scriptName)
@@ -272,6 +279,7 @@ inline int GetScriptReference(const std::string &scriptName)
 	constexpr std::hash<std::string> hasher {};
 	std::string name = scriptName;
 	std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+	std::transform(name.begin(), name.end(), name.begin(), [](int c) { return c == '\\' ? '/' : c; });
 
 	return std::abs(static_cast<int>(hasher(name))) + 1;
 }
@@ -287,10 +295,21 @@ inline int GetSourceReference(const dap::Source &src)
 	{
 		return -1;
 	}
-	std::string path = src.path.value();
-	if (src.origin.has_value())
+	std::string path = NormalizePath(src.path.value());
+	std::string origin = NormalizePath(src.origin.value());
+	if (!origin.empty())
 	{
-		path = src.origin.value() + ":" + path;
+		// find the last '/' in the origin
+		auto lastSlash = origin.find_last_of('/');
+		if (lastSlash != std::string::npos)
+		{
+			// check if it's an archive name (i.e has a file extension)
+			if (origin.find_last_of('.', lastSlash) != std::string::npos)
+			{
+				origin = origin.substr(lastSlash + 1);
+			}
+		}
+		path = origin + ":" + path;
 	}
 	return GetScriptReference(path);
 }

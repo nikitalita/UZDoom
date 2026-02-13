@@ -35,7 +35,12 @@ namespace DebugServer
 
 static void NormalizeArchivePath(std::string &path)
 {
-	if (path.find(":") != std::string::npos)
+	auto it = path.find(":");
+	if (it != std::string::npos && (it == 1 && path.size() >= 2 && path[2] == '\\')) // make sure it's not a windows path
+	{
+		it = path.find(":", 3);
+	}
+	if (it != std::string::npos)
 	{
 		path.erase(std::remove(path.begin(), path.end(), ':'), path.end());
 	}
@@ -87,7 +92,7 @@ PexCache::BinaryPtr PexCache::makeEmptyBinary(const std::string &scriptPath, int
 	binary->archivePath = wadnum >= 0 ? fileSystem.GetResourceFileFullName(wadnum) : GetArchiveNameFromPath(scriptPath);
 	binary->archiveName = wadnum >= 0 ? fileSystem.GetResourceFileName(wadnum) : binary->archivePath;
 	NormalizeArchivePath(binary->archivePath);
-	binary->scriptReference = GetScriptReference(binary->GetQualifiedPath());
+	binary->scriptReference = GetSourceReference(binary->GetDapSource());
 	return binary;
 }
 
@@ -430,7 +435,7 @@ inline bool LineIsFunctionDeclaration(const std::string &line, const std::string
 // find the LINE that the function declaration starts on, lines starting at 1
 int PexCache::FindFunctionDeclaration(const std::shared_ptr<Binary> &source, const VMScriptFunction *func, int start_line_from_1)
 {
-	
+
 	std::string source_code;
 	if (!GetOrCacheSource(source, source_code))
 	{
@@ -513,10 +518,11 @@ std::vector<dap::Module> PexCache::GetModules()
 		std::string name = fileSystem.GetResourceFileName(i);
 		std::string path = fileSystem.GetResourceFileFullName(i);
 		NormalizeArchivePath(name);
+		NormalizeArchivePath(path);
 		module.name = name;
 		module.path = path;
 		modules.push_back(module);
-	}		
+	}
 	return modules;
 }
 
@@ -945,7 +951,7 @@ dap::Source DebugServer::Binary::GetDapSource() const
 {
 	dap::Source source;
 	source.name = scriptName;
-	source.origin = archiveName;
+	source.origin = archivePath;
 	source.path = unqualifiedScriptPath;
 	source.sourceReference = scriptReference;
 	source.adapterData = archivePath;
