@@ -31,6 +31,7 @@
 #include "DebugExecutionManager.h"
 #include "IdMap.h"
 #include "Protocol/struct_extensions.h"
+#include "Protocol/converters.h"
 
 #include <thread>
 
@@ -66,6 +67,11 @@ class ZScriptDebugger
 	bool IsEndingSession();
 	int GetLastStoppedThreadId() { return 0; }
 
+
+	dap::Source ConvertSourceToServer(const dap::Source &source);
+	dap::Source ConvertSourceToClient(const dap::Source &source);
+	dap::Breakpoint ConvertBreakpointToClient(const dap::Breakpoint &breakpoint);
+	dap::Breakpoint ConvertBreakpointToServer(const dap::Breakpoint &breakpoint);
 	dap::ResponseOrError<dap::InitializeResponse> Initialize(const dap::InitializeRequest &request);
 	dap::ResponseOrError<dap::LaunchResponse> Launch(const dap::PDSLaunchRequest &request);
 	dap::ResponseOrError<dap::AttachResponse> Attach(const dap::PDSAttachRequest &request);
@@ -95,9 +101,11 @@ class ZScriptDebugger
 	std::shared_ptr<RuntimeState> m_runtimeState;
 	std::shared_ptr<DebugExecutionManager> m_executionManager;
 	std::map<int, dap::Source> m_projectSources;
+	std::vector<dap::GZDoomProject> m_projects;
 	std::string m_projectPath;
 	std::string m_projectArchive;
 	dap::InitializeRequest m_clientCaps;
+	dap::ServerCaps m_serverCaps;
 	bool m_printLog = false;
 
 	RuntimeEvents::CreateStackEventHandle m_createStackEventHandle;

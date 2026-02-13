@@ -33,6 +33,10 @@
 #include "RuntimeState.h"
 #include "Utilities.h"
 #include "ZScriptDebugger.h"
+#include "Nodes/CVarScopeStateNode.h"
+#include "common/scripting/dap/Nodes/LocalScopeStateNode.h"
+#include "Protocol/converters.h"
+
 
 // This is the main class that handles the debug session and the debug requests/responses and events
 
@@ -121,9 +125,8 @@ bool ZScriptDebugger::EndSession(bool closed)
 	m_breakpointChangedEventHandle = nullptr;
 	m_exceptionThrownEventHandle = nullptr;
 	// clear session data
-	m_projectArchive.clear();
-	m_projectPath.clear();
 	m_projectSources.clear();
+	m_projects.clear();
 	m_breakpointManager->ClearBreakpoints();
 	m_endingSession = false;
 	return m_quitting;
@@ -138,7 +141,7 @@ void ZScriptDebugger::RegisterSessionHandlers()
 {
 	// The Initialize request is the first message sent from the client and the response reports debugger capabilities.
 	// https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Initialize
-	m_session->registerHandler([this](const dap::InitializeRequest &request) { return Initialize(request); });
+	m_session->registerHandler([this](const dap::InitializeRequest &request) { return dap::ConvertResponseToClient(Initialize(request), request, m_serverCaps); });
 	m_session->onError([this](const char *msg) { LogInternalError("%s", msg); });
 	m_session->registerSentHandler(
 		// After an intialize response is sent, we send an initialized event to indicate that the client can now send requests.
@@ -165,26 +168,26 @@ void ZScriptDebugger::RegisterSessionHandlers()
 			}
 			return dap::DisconnectResponse {};
 		});
-	m_session->registerHandler([this](const dap::PDSLaunchRequest &request) { return Launch(request); });
-	m_session->registerHandler([this](const dap::PDSAttachRequest &request) { return Attach(request); });
-	m_session->registerHandler([this](const dap::PauseRequest &request) { return Pause(request); });
-	m_session->registerHandler([this](const dap::ContinueRequest &request) { return Continue(request); });
-	m_session->registerHandler([this](const dap::ThreadsRequest &request) { return GetThreads(request); });
-	m_session->registerHandler([this](const dap::SetBreakpointsRequest &request) { return SetBreakpoints(request); });
-	m_session->registerHandler([this](const dap::SetExceptionBreakpointsRequest &request) { return SetExceptionBreakpoints(request); });
-	m_session->registerHandler([this](const dap::SetFunctionBreakpointsRequest &request) { return SetFunctionBreakpoints(request); });
-	m_session->registerHandler([this](const dap::SetInstructionBreakpointsRequest &request) { return SetInstructionBreakpoints(request); });
-	m_session->registerHandler([this](const dap::StackTraceRequest &request) { return GetStackTrace(request); });
-	m_session->registerHandler([this](const dap::StepInRequest &request) { return StepIn(request); });
-	m_session->registerHandler([this](const dap::StepOutRequest &request) { return StepOut(request); });
-	m_session->registerHandler([this](const dap::NextRequest &request) { return Next(request); });
-	m_session->registerHandler([this](const dap::ScopesRequest &request) { return GetScopes(request); });
-	m_session->registerHandler([this](const dap::VariablesRequest &request) { return GetVariables(request); });
-	m_session->registerHandler([this](const dap::SourceRequest &request) { return GetSource(request); });
-	m_session->registerHandler([this](const dap::LoadedSourcesRequest &request) { return GetLoadedSources(request); });
-	m_session->registerHandler([this](const dap::DisassembleRequest &request) { return Disassemble(request); });
-	m_session->registerHandler([this](const dap::EvaluateRequest &request) { return Evaluate(request); });
-	m_session->registerHandler([this](const dap::ModulesRequest &request) { return Modules(request); });
+	m_session->registerHandler([this](const dap::PDSLaunchRequest &request) { return ConvertResponseToClient(Launch(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::PDSAttachRequest &request) { return ConvertResponseToClient(Attach(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::PauseRequest &request) { return ConvertResponseToClient(Pause(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::ContinueRequest &request) { return ConvertResponseToClient(Continue(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::ThreadsRequest &request) { return ConvertResponseToClient(GetThreads(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::SetBreakpointsRequest &request) { return ConvertResponseToClient(SetBreakpoints(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::SetExceptionBreakpointsRequest &request) { return ConvertResponseToClient(SetExceptionBreakpoints(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::SetFunctionBreakpointsRequest &request) { return ConvertResponseToClient(SetFunctionBreakpoints(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::SetInstructionBreakpointsRequest &request) { return ConvertResponseToClient(SetInstructionBreakpoints(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::StackTraceRequest &request) { return ConvertResponseToClient(GetStackTrace(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::StepInRequest &request) { return ConvertResponseToClient(StepIn(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::StepOutRequest &request) { return ConvertResponseToClient(StepOut(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::NextRequest &request) { return ConvertResponseToClient(Next(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::ScopesRequest &request) { return ConvertResponseToClient(GetScopes(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::VariablesRequest &request) { return ConvertResponseToClient(GetVariables(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::SourceRequest &request) { return ConvertResponseToClient(GetSource(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::LoadedSourcesRequest &request) { return ConvertResponseToClient(GetLoadedSources(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::DisassembleRequest &request) { return ConvertResponseToClient(Disassemble(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::EvaluateRequest &request) { return ConvertResponseToClient(Evaluate(request), m_clientCaps, m_serverCaps); });
+	m_session->registerHandler([this](const dap::ModulesRequest &request) { return ConvertResponseToClient(Modules(request), m_clientCaps, m_serverCaps); });
 }
 
 dap::Error ZScriptDebugger::Error(const std::string &msg)
@@ -258,7 +261,7 @@ void ZScriptDebugger::CheckSourceLoaded(const std::string &scriptName)
 	{
 		dap::LoadedSourceEvent event;
 		event.reason = "new";
-		event.source = binary->GetDapSource();
+		event.source = ConvertSourceToClient(binary->GetDapSource());
 		SendEvent(event);
 	}
 }
@@ -267,6 +270,10 @@ void ZScriptDebugger::BreakpointChanged(const dap::Breakpoint &bpoint, const std
 {
 	dap::BreakpointEvent event;
 	event.breakpoint = bpoint;
+	if (event.breakpoint.source.has_value())
+	{
+		event.breakpoint.source = ConvertSourceToClient(event.breakpoint.source.value());
+	}
 	event.reason = reason;
 	SendEvent(event);
 }
@@ -312,6 +319,7 @@ dap::ResponseOrError<dap::LaunchResponse> ZScriptDebugger::Launch(const dap::PDS
 	attach_request.name = request.name;
 	attach_request.type = request.type;
 	attach_request.request = request.request;
+	attach_request.projects = request.projects;
 	attach_request.projectSources = request.projectSources;
 
 	auto resp = Attach(attach_request);
@@ -324,6 +332,10 @@ dap::ResponseOrError<dap::LaunchResponse> ZScriptDebugger::Launch(const dap::PDS
 
 dap::ResponseOrError<dap::AttachResponse> ZScriptDebugger::Attach(const dap::PDSAttachRequest &request)
 {
+	for (auto project : request.projects.value(std::vector<dap::GZDoomProject>()))
+	{
+		m_projects.push_back({NormalizePath(project.path), NormalizePath(project.archive)});
+	}
 	m_projectSources.clear();
 	if (!request.restart.has_value())
 	{
@@ -370,20 +382,14 @@ dap::ResponseOrError<dap::ThreadsResponse> ZScriptDebugger::GetThreads(const dap
 
 dap::ResponseOrError<dap::SetBreakpointsResponse> ZScriptDebugger::SetBreakpoints(const dap::SetBreakpointsRequest &request)
 {
-	dap::Source source = request.source;
+	dap::Source source = ConvertSourceToServer(request.source);
 	auto ref = GetSourceReference(source);
-	if (m_projectSources.find(ref) != m_projectSources.end())
+	auto resp = m_breakpointManager->SetBreakpoints(source, request);
+	for (auto &bp : resp.response.breakpoints)
 	{
-		source = m_projectSources[ref];
+		bp.source = ConvertSourceToClient(bp.source.value());
 	}
-	else if (ref > 0)
-	{
-		// It's not part of the project's imported sources, they have to get the decompiled source from us,
-		// So we set sourceReference to make the debugger request the source from us
-		source.sourceReference = ref;
-	}
-	return m_breakpointManager->SetBreakpoints(source, request);
-	;
+	return resp;
 }
 
 dap::ResponseOrError<dap::SetFunctionBreakpointsResponse> ZScriptDebugger::SetFunctionBreakpoints(const dap::SetFunctionBreakpointsRequest &request) { return m_breakpointManager->SetFunctionBreakpoints(request); }
@@ -414,6 +420,10 @@ dap::ResponseOrError<dap::StackTraceResponse> ZScriptDebugger::GetStackTrace(con
 		if (!node->SerializeToProtocol(frame, m_pexCache.get()))
 		{
 			RETURN_DAP_ERROR("Serialization error");
+		}
+		if (frame.source.has_value())
+		{
+			frame.source = ConvertSourceToClient(frame.source.value());
 		}
 
 		response.stackFrames.push_back(frame);
@@ -695,7 +705,7 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 			if (localScope){
 				localScope->GetChildNames(localChildrenNames);
 				caseless_path_set localChildrenNamesSet(localChildrenNames.begin(), localChildrenNames.end());
-				
+
 				path = StringFormat("%s.%s", localsPath.c_str(), request.expression.c_str());
 				if(!TryPath(path)){
 					RETURN_DAP_ERROR(StringFormat("Could not serialize variable %s", request.expression.c_str()).c_str());
@@ -789,7 +799,7 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 		// try a c_var?
 		auto cvar = FindConsoleVariable(cmdstr);
 		if (cvar){
-			
+
 			if (args.size() > 1){
 				if (cmdstr == "vm_debug" || cmdstr == "vm_debug_port"){
 					return dap::Error(StringFormat("Refusing change %s while debugging!", cmdstr.c_str()).c_str());
@@ -814,7 +824,7 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 				response.indexedVariables = var.indexedVariables;
 				response.presentationHint = var.presentationHint;
 			}
-			
+
 			return response;
 		}
 		return dap::Error(StringFormat("Command %s not found!", request.expression.c_str()).c_str());
@@ -824,5 +834,44 @@ dap::ResponseOrError<dap::EvaluateResponse> ZScriptDebugger::Evaluate(const dap:
 	return dap::Error(StringFormat("Could not evaluate expression %s", request.expression.c_str()).c_str());
 
 }
+
+dap::Source ZScriptDebugger::ConvertSourceToClient(const dap::Source &source){
+	if (!source.path.has_value())
+	{
+		return source;
+	}
+	auto clientSource = source;
+	auto _it = std::find_if(m_projects.begin(), m_projects.end(), [&](const dap::GZDoomProject &project){
+		// check if the path STARTS with the project path
+		if (CaseInsensitiveEquals(project.archive, clientSource.origin.value(""))) {
+			// concat the project path and the client path
+			clientSource.path = StringFormat("%s/%s", project.path.c_str(), clientSource.path.value("").c_str());
+			clientSource.origin = project.archive;
+			clientSource.sourceReference = 0;
+		}
+		return true;
+	});
+	if (_it == m_projects.end()){ // If the client doesn't have it, we have to set the source reference so that they can get it from us
+		clientSource.sourceReference = GetSourceReference(clientSource);
+	}
+	return clientSource;
+}
+
+dap::Source ZScriptDebugger::ConvertSourceToServer(const dap::Source &source){
+	auto serverSource = source;
+	auto path = NormalizePath(source.path.value(""));
+	auto _it = std::find_if(m_projects.begin(), m_projects.end(), [&](const dap::GZDoomProject &project){
+		// check if the path STARTS with the project path
+		if (CaseInsensitiveFind(path, project.path) == 0) {
+			serverSource.path = path.substr(project.path.size());
+			serverSource.origin = project.archive;
+		}
+		return true;
+	});
+	serverSource.sourceReference = GetSourceReference(serverSource);
+	return serverSource;
+}
+
+
 
 } // namespace DebugServer
