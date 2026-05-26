@@ -1388,6 +1388,7 @@ include_directories(
 	../libraries/ZWidget/include
 	../libraries/webp/include
 	../libraries/range_map/include
+	../libraries/gtl/include
 	${SYSTEM_SOURCES_DIR}
 )
 

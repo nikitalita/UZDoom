@@ -31,6 +31,8 @@
 
 #include "PexCache.h"
 
+#include <gtl/phmap.hpp>
+
 namespace DebugServer
 {
 class BreakpointManager
@@ -85,10 +87,13 @@ class BreakpointManager
 	void SetBPStoppedEventInfo(VMFrameStack *stack, dap::StoppedEvent &event);
 	private:
 
+	using BreakpointsMap = gtl::parallel_flat_hash_map<void *, std::vector<BreakpointInfo>>;
+	using NativeFunctionBreakpointsMap = gtl::parallel_flat_hash_map<std::string_view, BreakpointInfo, gtl::priv::HashEq<std::string_view>::Hash, ci_less>;
+
 	PexCache *m_pexCache;
-	std::map<void *, std::vector<BreakpointInfo>> m_breakpoints;
+	BreakpointsMap m_breakpoints;
 	// set of case-insensitive strings
-	std::map<std::string_view, BreakpointInfo, ci_less> m_nativeFunctionBreakpoints;
+	NativeFunctionBreakpointsMap m_nativeFunctionBreakpoints;
 	IdProvider m_idProvider;
 	std::atomic<int64_t> m_CurrentID = 0;
 	size_t times_seen = 0;
