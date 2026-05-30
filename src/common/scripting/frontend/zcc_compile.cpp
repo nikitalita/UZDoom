@@ -3054,8 +3054,8 @@ FxExpression *ZCCCompiler::ConvertAST(PContainerType *cls, ZCC_TreeNode *ast)
 	else
 	{
 		// This must be done here so that we can check for a trailing return statement.
-		auto x = new FxCompoundStatement(*ast);
 		auto compound = static_cast<ZCC_CompoundStmt *>(ast);
+		auto x = new FxCompoundStatement(*ast, FScriptPosition(*compound->SourceName, compound->EndSourceLoc));
 		//bool isreturn = false;
 		auto node = compound->Content;
 		if (node != nullptr) do
@@ -3601,8 +3601,8 @@ FxExpression *ZCCCompiler::ConvertNode(ZCC_TreeNode *ast, bool substitute)
 
 	case AST_CompoundStmt:
 	{
-		auto x = new FxCompoundStatement(*ast);
 		auto compound = static_cast<ZCC_CompoundStmt *>(ast);
+		auto x = new FxCompoundStatement(*ast, FScriptPosition(*compound->SourceName, compound->EndSourceLoc));
 		auto node = compound->Content;
 		if (node != nullptr) do
 		{

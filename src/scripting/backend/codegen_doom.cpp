@@ -1144,8 +1144,13 @@ FxExpression *FxCastForEachLoop::Resolve(FCompileContext &ctx)
 	body
 	}
 	*/
+	FScriptPosition endpos;
+	if (Code->ExprType == EFX_CompoundStatement)
+	{
+		endpos = static_cast<FxCompoundStatement*>(Code)->GetEndPosition();
+	}
 
-	auto block = new FxCompoundStatement(ScriptPosition);
+	auto block = new FxCompoundStatement(ScriptPosition, endpos);
 
 	block->Add(new FxLocalVariableDeclaration(varType, varName, nullptr, 0, ScriptPosition));
 
@@ -1244,8 +1249,13 @@ FxExpression *FxBlockIteratorForEachLoop::Resolve(FCompileContext &ctx)
 	}
 	}
 	*/
+	FScriptPosition endpos;
+	if (Code->ExprType == EFX_CompoundStatement)
+	{
+		endpos = static_cast<FxCompoundStatement*>(Code)->GetEndPosition();
+	}
 
-	auto block = new FxCompoundStatement(ScriptPosition);
+	auto block = new FxCompoundStatement(ScriptPosition, endpos);
 
 	block->Add(new FxLocalVariableDeclaration(varType, varVarName, nullptr, 0, ScriptPosition));
 	if(posVarName != NAME_None)
@@ -1259,7 +1269,7 @@ FxExpression *FxBlockIteratorForEachLoop::Resolve(FCompileContext &ctx)
 
 	block->Add(new FxLocalVariableDeclaration(BlockIteratorExpr->ValueType, "@it", BlockIteratorExpr, 0, ScriptPosition));
 
-	auto inner_block = new FxCompoundStatement(ScriptPosition);
+	auto inner_block = new FxCompoundStatement(ScriptPosition, endpos);
 
 	inner_block->Add(new FxAssign(new FxIdentifier(varVarName, ScriptPosition), new FxMemberIdentifier(new FxIdentifier("@it", ScriptPosition), fieldName, ScriptPosition), true));
 	if(posVarName != NAME_None)

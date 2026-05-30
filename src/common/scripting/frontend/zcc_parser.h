@@ -524,6 +524,7 @@ struct ZCC_StaticArrayStatement : ZCC_Statement
 struct ZCC_CompoundStmt : ZCC_Statement
 {
 	ZCC_Statement *Content;
+	int EndSourceLoc;
 };
 
 struct ZCC_ContinueStmt : ZCC_Statement

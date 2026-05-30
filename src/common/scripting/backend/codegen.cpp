@@ -11816,7 +11816,13 @@ FxExpression* FxForEachLoop::DoResolve(FCompileContext& ctx)
 		FName sizevar = "@size";
 		FName itvar = "@i";
 
-		auto block = new FxCompoundStatement(ScriptPosition);
+		FScriptPosition endpos;
+		if (Code->ExprType == EFX_CompoundStatement)
+		{
+			endpos = static_cast<FxCompoundStatement*>(Code)->GetEndPosition();
+		}
+
+		auto block = new FxCompoundStatement(ScriptPosition, endpos);
 		auto arraysize = new FxMemberFunctionCall(Array, NAME_Size, {}, ScriptPosition);
 		auto size = new FxLocalVariableDeclaration(TypeSInt32, sizevar, arraysize, 0, ScriptPosition);
 		auto it = new FxLocalVariableDeclaration(TypeSInt32, itvar, new FxConstant(0, ScriptPosition), 0, ScriptPosition);
@@ -11834,7 +11840,7 @@ FxExpression* FxForEachLoop::DoResolve(FCompileContext& ctx)
 		auto access = new FxArrayElement(Array2, ait, true); // Note: Array must be a separate copy because these nodes cannot share the same element.
 
 		auto assign = new FxLocalVariableDeclaration(TypeAuto, loopVarName, access, 0, ScriptPosition);
-		auto body = new FxCompoundStatement(ScriptPosition);
+		auto body = new FxCompoundStatement(ScriptPosition, endpos);
 		body->Add(assign);
 		body->Add(Code);
 		auto forloop = new FxForLoop(nullptr, comp, bump, body, ScriptPosition);
@@ -11913,8 +11919,13 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 		return nullptr;
 	}
 
+	FScriptPosition endpos;
+	if (Code->ExprType == EFX_CompoundStatement)
+	{
+		endpos = static_cast<FxCompoundStatement*>(Code)->GetEndPosition();
+	}
 
-	auto block = new FxCompoundStatement(ScriptPosition);
+	auto block = new FxCompoundStatement(ScriptPosition, endpos);
 
 	auto valType = is_iterator ? static_cast<PMapIterator*>(MapExpr->ValueType)->ValueType : static_cast<PMap*>(MapExpr->ValueType)->ValueType;
 	auto keyType = is_iterator ? static_cast<PMapIterator*>(MapExpr->ValueType)->KeyType : static_cast<PMap*>(MapExpr->ValueType)->KeyType;
@@ -11944,7 +11955,7 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 		}
 		*/
 
-		auto inner_block = new FxCompoundStatement(ScriptPosition);
+		auto inner_block = new FxCompoundStatement(ScriptPosition, endpos);
 
 		if(keyVarName != NAME_None)
 		{
@@ -11987,7 +11998,7 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 
 		block->Add(new FxMemberFunctionCall(new FxIdentifier("@it", ScriptPosition), "Init", std::move(al_map), ScriptPosition));
 
-		auto inner_block = new FxCompoundStatement(ScriptPosition);
+		auto inner_block = new FxCompoundStatement(ScriptPosition, endpos);
 
 		if(keyVarName != NAME_None)
 		{

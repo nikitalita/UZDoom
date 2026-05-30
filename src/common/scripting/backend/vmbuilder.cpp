@@ -892,9 +892,14 @@ void FFunctionBuildList::Build()
 			{
 				if (ctx.ReturnProto == nullptr || !ctx.ReturnProto->ReturnTypes.Size())
 				{
-					auto newcmpd = new FxCompoundStatement(item.Code->ScriptPosition);
+					FScriptPosition endposition = item.Code->ScriptPosition;
+					if (item.Code->ExprType == EFX_CompoundStatement)
+					{
+						endposition = static_cast<FxCompoundStatement*>(item.Code)->GetEndPosition();
+					}
+					auto newcmpd = new FxCompoundStatement(item.Code->ScriptPosition, endposition);
 					newcmpd->Add(item.Code);
-					newcmpd->Add(new FxReturnStatement(nullptr, item.Code->ScriptPosition));
+					newcmpd->Add(new FxReturnStatement(nullptr, endposition));
 					item.Code = newcmpd->Resolve(ctx);
 				}
 				else

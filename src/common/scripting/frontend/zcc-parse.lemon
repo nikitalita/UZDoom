@@ -770,10 +770,11 @@ light_list(X) ::= light_list(A) COMMA STRCONST(B).
 }
 
 /* A state action can be either a compound statement or a single action function call. */
-state_action(X) ::= LBRACE(T) statement_list(A) scanner_mode RBRACE.
+state_action(X) ::= LBRACE(T) statement_list(A) scanner_mode RBRACE(E).
 {
 	NEW_AST_NODE(CompoundStmt,stmt,T);
 	stmt->Content = A;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
 state_action(X) ::= LBRACE scanner_mode RBRACE.
@@ -805,22 +806,25 @@ state_call_params(X) ::= LPAREN func_expr_list(A) RPAREN.	{ X = A; /*X-overwrite
 %type default_statement_list{ZCC_Statement *}
 %type default_statement{ZCC_Statement *}
 
-default_def(X) ::= DEFAULT LBRACE(T) RBRACE.
+default_def(X) ::= DEFAULT LBRACE(T) RBRACE(E).
 {
 	NEW_AST_NODE(Default,stmt,T);
 	stmt->Content = NULL;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
-default_def(X) ::= DEFAULT LBRACE(T) default_statement_list(A) RBRACE.
+default_def(X) ::= DEFAULT LBRACE(T) default_statement_list(A) RBRACE(E).
 {
 	NEW_AST_NODE(Default,stmt,T);
 	stmt->Content = A;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
-default_def(X) ::= DEFAULT LBRACE(T) error RBRACE.
+default_def(X) ::= DEFAULT LBRACE(T) error RBRACE(E).
 {
 	NEW_AST_NODE(Default,stmt,T);
 	stmt->Content = NULL;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
 
@@ -2094,22 +2098,25 @@ jump_statement(A) ::= RETURN(T) expr_list(X) SEMICOLON.
 %type compound_statement{ZCC_CompoundStmt *}
 %type statement_list{ZCC_Statement *}
 
-compound_statement(X) ::= LBRACE(T) RBRACE.
+compound_statement(X) ::= LBRACE(T) RBRACE(E).
 {
 	NEW_AST_NODE(CompoundStmt,stmt,T);
 	stmt->Content = NULL;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
-compound_statement(X) ::= LBRACE(T) statement_list(A) RBRACE.
+compound_statement(X) ::= LBRACE(T) statement_list(A) RBRACE(E).
 {
 	NEW_AST_NODE(CompoundStmt,stmt,T);
 	stmt->Content = A;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
-compound_statement(X) ::= LBRACE(T) error RBRACE.
+compound_statement(X) ::= LBRACE(T) error RBRACE(E).
 {
 	NEW_AST_NODE(CompoundStmt,stmt,T);
 	stmt->Content = NULL;
+	stmt->EndSourceLoc = E.SourceLoc;
 	X = stmt;
 }
 
@@ -2174,7 +2181,7 @@ iteration_statement(X) ::= DO(T) statement(ST) while_or_until(TY) LPAREN expr(EX
 	X = iter;
 }
 // for (init; cond; bump) statement
-iteration_statement(X) ::= FOR(T) LPAREN for_init(IN) SEMICOLON opt_expr(EX) SEMICOLON for_bump(DO) RPAREN statement(ST).
+iteration_statement(X) ::= FOR(T) LPAREN for_init(IN) SEMICOLON opt_expr(EX) SEMICOLON for_bump(DO) RPAREN(RP) statement(ST).
 {
 	NEW_AST_NODE(IterationStmt, iter, T);
 	iter->LoopCondition = EX;
@@ -2188,6 +2195,21 @@ iteration_statement(X) ::= FOR(T) LPAREN for_init(IN) SEMICOLON opt_expr(EX) SEM
 	// initializer defined any variables.
 	NEW_AST_NODE(CompoundStmt, wrap, T);
 	wrap->Content = IN;
+	if (ST)
+	{
+		if (ST->NodeType == AST_CompoundStmt || ST->NodeType == AST_Default)
+		{
+			wrap->EndSourceLoc = static_cast<ZCC_CompoundStmt*>(ST)->EndSourceLoc;
+		}
+		else
+		{
+			wrap->EndSourceLoc = ST->SourceLoc;
+		}
+	}
+	else
+	{
+		wrap->EndSourceLoc = RP.SourceLoc;
+	}
 	X = wrap;
 }
 

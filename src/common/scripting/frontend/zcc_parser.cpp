@@ -1122,6 +1122,7 @@ ZCC_TreeNode *TreeNodeDeepCopy_Internal(ZCC_AST *ast, ZCC_TreeNode *orig, bool c
 
 		// ZCC_CompoundStmt
 		copy->Content = static_cast<ZCC_Statement *>(TreeNodeDeepCopy_Internal(ast, origCasted->Content, true, copiedNodesList));
+		copy->EndSourceLoc = origCasted->EndSourceLoc;
 
 		break;
 	}
@@ -1373,6 +1374,7 @@ ZCC_TreeNode *TreeNodeDeepCopy_Internal(ZCC_AST *ast, ZCC_TreeNode *orig, bool c
 
 		// ZCC_CompoundStmt
 		copy->Content = static_cast<ZCC_Statement *>(TreeNodeDeepCopy_Internal(ast, origCasted->Content, true, copiedNodesList));
+		copy->EndSourceLoc = origCasted->EndSourceLoc;
 
 		break;
 	}

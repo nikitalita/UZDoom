@@ -531,6 +531,9 @@ FxExpression *ParseActions(FScanner &sc, FState state, FString statestring, Bagg
 			seq->Add(add);
 		}
 	}
+	if (seq) {
+		seq->SetEndPosition(FScriptPosition(sc));
+	}
 	endswithret = lastwasret;
 	return seq;
 }

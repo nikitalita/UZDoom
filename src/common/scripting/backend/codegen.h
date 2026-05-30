@@ -1873,7 +1873,7 @@ class FxSequence : public FxExpression
 	TDeletingArray<FxExpression *> Expressions;
 
 public:
-	FxSequence(const FScriptPosition &pos) : FxExpression(EFX_Sequence, pos) {}
+	FxSequence(const FScriptPosition &pos, EFxType type = EFX_Sequence) : FxExpression(type, pos) {}
 	FxExpression *Resolve(FCompileContext&);
 	ExpEmit Emit(VMFunctionBuilder *build);
 	void Add(FxExpression *expr) { if (expr != NULL) Expressions.Push(expr); expr->NeedResult = false; }
@@ -1892,6 +1892,7 @@ class FxCompoundStatement : public FxSequence
 {
 	TArray<FxLocalVariableDeclaration *> LocalVars;
 	FxCompoundStatement *Outer = nullptr;
+	FScriptPosition EndPosition;
 
 	friend class FxLocalVariableDeclaration;
 	friend class FxStaticArray;
@@ -1899,11 +1900,13 @@ class FxCompoundStatement : public FxSequence
 	friend class FxLocalArrayDeclaration;
 
 public:
-	FxCompoundStatement(const FScriptPosition &pos) : FxSequence(pos) {}
+	FxCompoundStatement(const FScriptPosition &pos, const FScriptPosition &endpos = {}) : FxSequence(pos, EFX_CompoundStatement), EndPosition(endpos) {}
 	FxExpression *Resolve(FCompileContext&);
 	ExpEmit Emit(VMFunctionBuilder *build);
 	FxLocalVariableDeclaration *FindLocalVariable(FName name, FCompileContext &ctx);
 	bool CheckLocalVariable(FName name);
+	FScriptPosition GetEndPosition() const { return EndPosition.FileName != NAME_None && EndPosition.ScriptLine != 0 ? EndPosition : ScriptPosition; }
+	void SetEndPosition(const FScriptPosition &endpos) { EndPosition = endpos; }
 };
 
 //==========================================================================
