@@ -22,16 +22,15 @@
 
 #pragma once
 #include <map>
-#include <set>
+#include <mutex>
 #include <dap/protocol.h>
 #include <dap/session.h>
+#include <boost_unordered.hpp>
 
-#include "GameInterfaces.h"
 #include "IdProvider.h"
 
 #include "PexCache.h"
-
-#include "boost_concurrent.hpp"
+#include "Utilities.h"
 
 namespace DebugServer
 {
@@ -87,12 +86,18 @@ class BreakpointManager
 	void SetBPStoppedEventInfo(VMFrameStack *stack, dap::StoppedEvent &event);
 	private:
 
-	using BreakpointsMap = boost::concurrent_flat_map<void *, std::vector<BreakpointInfo>>;
-	using NativeFunctionBreakpointsMap = boost::concurrent_flat_map<std::string_view, BreakpointInfo, boost::hash<std::string_view>, std::equal_to<std::string_view>>;
+	using BreakpointsMap = boost::unordered_flat_map<void *, std::vector<BreakpointInfo>>;
+	using NativeFunctionBreakpointsMap = boost::unordered_flat_map<std::string_view, BreakpointInfo, boost::hash<std::string_view>, ci_less>;
 
+	using Mutex = std::mutex;
+	using WriteLock = std::lock_guard<Mutex>;
+	using ReadLock = std::lock_guard<Mutex>;
 	PexCache *m_pexCache;
+	// read/write mutex
+	Mutex m_breakpointsMutex;
 	BreakpointsMap m_breakpoints;
 	// set of case-insensitive strings
+	Mutex m_nativeFunctionBreakpointsMutex;
 	NativeFunctionBreakpointsMap m_nativeFunctionBreakpoints;
 	IdProvider m_idProvider;
 	std::atomic<int64_t> m_CurrentID = 0;
