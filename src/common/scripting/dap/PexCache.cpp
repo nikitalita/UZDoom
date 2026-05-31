@@ -30,6 +30,7 @@
 #include "filesystem.h"
 #include "printf.h"
 #include "resourcefile.h"
+#include "common/filesystem/source/md5.hpp"
 
 namespace DebugServer
 {
@@ -101,6 +102,18 @@ PexCache::BinaryPtr PexCache::makeEmptyBinary(const std::string &scriptPath, int
 	return std::make_shared<Binary>(scriptPath, lump);
 }
 
+namespace {
+static std::string toHexString(const uint8_t* digest, size_t length)
+{
+	std::string result;
+	for (size_t i = 0; i < length; i++)
+	{
+		result += StringFormat("%02X",(unsigned int)digest[i]);
+	}
+	return result;
+}
+}
+
 Binary::Binary(const std::string &scriptPath, int p_lump)
 {
 	auto truncScriptPath = GetScriptPathNoQual(scriptPath);
@@ -112,6 +125,14 @@ Binary::Binary(const std::string &scriptPath, int p_lump)
 	archiveName = wadnum >= 0 ? fileSystem.GetResourceFileName(wadnum) : archivePath;
 	NormalizeArchivePath(archivePath, archiveName);
 	scriptReference = GetScriptReference(GetQualifiedPath());
+	if (PexCache::GetSourceContent(lump, cachedSourceCode))
+	{
+		PexCache::GetMD5Hash(cachedSourceCode.c_str(), cachedSourceCode.size(), md5);
+	}
+	else
+	{
+		memset(md5, 0, 16);
+	}
 }
 
 void PexCache::PopulateCodeMap(PexCache::BinaryPtr binary, Binary::FunctionCodeMap &functionCodeMap)
@@ -302,7 +323,8 @@ std::vector<VMFunction *> PexCache::GetFunctionsAtAddress(void *address)
 
 	return funcs;
 }
-std::shared_ptr<Binary> PexCache::GetScript(std::string fqsn)
+
+std::shared_ptr<Binary> PexCache::GetScript(const std::string &fqsn)
 {
 	uint32_t reference = GetScriptReference(fqsn);
 	auto binary = GetCachedScript(reference);
@@ -313,9 +335,19 @@ std::shared_ptr<Binary> PexCache::GetScript(std::string fqsn)
 	return AddScript(fqsn);
 }
 
-bool PexCache::GetSourceContent(const std::string &scriptPath, std::string &decompiledSource)
+
+void PexCache::GetMD5Hash(const char *src, size_t length, uint8_t *md5)
 {
-	auto lump = GetScriptFileID(scriptPath);
+	using namespace FileSys::md5;
+
+	md5_state_t state;
+	md5_init(&state);
+	md5_append(&state, (const uint8_t*)src, length);
+	md5_finish(&state, md5);
+}
+
+bool PexCache::GetSourceContent(int lump, std::string &decompiledSource)
+{
 	if (lump == -1)
 	{
 		return false;
@@ -355,7 +387,7 @@ bool PexCache::GetOrCacheSource(BinaryPtr binary, std::string &decompiledSource)
 	{
 		scripts_lock scriptLock(m_scriptsMutex);
 
-		if (binary->cachedSourceCode.empty() && !GetSourceContent(binary->GetQualifiedPath(), binary->cachedSourceCode))
+		if (binary->cachedSourceCode.empty() && !GetSourceContent(binary->GetLump(), binary->cachedSourceCode))
 		{
 			return false;
 		}
@@ -855,6 +887,7 @@ bool PexCache::GetDisassemblyLines(const VMOP *address, int64_t p_instructionOff
 }
 }
 
+int DebugServer::Binary::GetLump() const { return lump; }
 std::string DebugServer::Binary::GetQualifiedPath() const { return archiveName + ":" + unqualifiedScriptPath; }
 std::string DebugServer::Binary::GetArchiveName() const { return archiveName; }
 std::string DebugServer::Binary::GetArchivePath() const
@@ -954,6 +987,9 @@ dap::Source DebugServer::Binary::GetDapSource() const
 	source.path = unqualifiedScriptPath;
 	source.sourceReference = scriptReference;
 	source.adapterData = dap::integer(lump);
+	if (memcmp(md5, EMPTY_MD5, 16) != 0) {
+		source.checksums = {{"MD5", toHexString(md5, 16)}};
+	}
 	return source;
 }
 
@@ -971,4 +1007,21 @@ std::pair<int, int> DebugServer::Binary::GetFunctionLineRange(const VMScriptFunc
 		}
 	}
 	return {0, 0};
+}
+
+bool DebugServer::Binary::HasChangedOnDisk() const
+{
+	bool changed_on_disk = false;
+	std::string new_source_code;
+	if (!PexCache::GetSourceContent(lump, new_source_code))
+	{
+		return true;
+	}
+	uint8_t modified_md5[16];
+	PexCache::GetMD5Hash(new_source_code.c_str(), new_source_code.size(), modified_md5);
+	if (memcmp(md5, modified_md5, 16) != 0)
+	{
+		return true;
+	}
+	return false;
 }

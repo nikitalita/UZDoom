@@ -310,7 +310,7 @@ dap::ResponseOrError<dap::InitializeResponse> ZScriptDebugger::Initialize(const 
 	LogInternal("Initializing DAP session...");
 	response.supportsConfigurationDoneRequest = true;
 	response.supportsLoadedSourcesRequest = true;
-	response.supportedChecksumAlgorithms = {"CRC32"};
+	response.supportedChecksumAlgorithms = {"MD5"};
 	response.supportsFunctionBreakpoints = true;
 #if !defined(_WIN32) && !defined(_WIN64)
 	// TODO: remove this when disassemble is supported on windows
