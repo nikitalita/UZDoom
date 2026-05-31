@@ -23,11 +23,9 @@
 #include "BreakpointManager.h"
 #include <atomic>
 #include <cstdint>
-#include <regex>
 #include "Utilities.h"
 #include "RuntimeEvents.h"
 #include "GameInterfaces.h"
-#include "DebugExecutionManager.h"
 
 namespace DebugServer
 {
@@ -86,7 +84,7 @@ bool BreakpointManager::AddBreakpointInfo(
 	}
 	auto instrRef = (void *)(static_cast<char *>(p_instrRef) + offset);
 	bool alreadyExists = false;
-	m_breakpoints.if_contains(instrRef, [&](const BreakpointsMap::value_type &kv){
+	m_breakpoints.visit(instrRef, [&](const BreakpointsMap::value_type &kv){
 		for (const auto &binfo : kv.second)
 		{
 			if (binfo.type == type)
@@ -121,7 +119,7 @@ bool BreakpointManager::AddBreakpointInfo(
 	bool existingAtLine = false;
 	if (type == BreakpointInfo::Type::Line)
 	{
-		m_breakpoints.for_each([&](const BreakpointsMap::value_type &kv)
+		m_breakpoints.visit_all([&](const BreakpointsMap::value_type &kv)
 		{
 			if (existingAtLine) {
 				return;
@@ -141,11 +139,9 @@ bool BreakpointManager::AddBreakpointInfo(
 		});
 	}
 	binfo.bpoint.verified = !existingAtLine;
-	if (!m_breakpoints.modify_if(instrRef, [&](BreakpointsMap::value_type &v){
+	m_breakpoints.insert_or_visit({instrRef, {binfo}},[&](BreakpointsMap::value_type &v){
 		v.second.push_back(binfo);
-	})){
-		m_breakpoints.insert_or_assign(instrRef, {binfo});
-	}
+	});
 
 
 	if (!existingAtLine){
@@ -156,7 +152,7 @@ bool BreakpointManager::AddBreakpointInfo(
 
 void BreakpointManager::GetBpointsForResponse(BreakpointInfo::Type type, std::vector<dap::Breakpoint> &responseBpoints)
 {
-	m_breakpoints.for_each([&responseBpoints, type](const BreakpointsMap::value_type &bPoints)
+	m_breakpoints.visit_all([&responseBpoints, type](const BreakpointsMap::value_type &bPoints)
 	{
 		if (bPoints.second.empty())
 		{
@@ -329,7 +325,7 @@ dap::ResponseOrError<dap::SetFunctionBreakpointsResponse> BreakpointManager::Set
 			bpoint_info.bpoint.id = GetBreakpointID();
 			bpoint_info.bpoint.line = 1;
 			bpoint_info.bpoint.verified = true;
-			m_nativeFunctionBreakpoints[func->QualifiedName] = bpoint_info;
+			m_nativeFunctionBreakpoints.insert_or_assign(func->QualifiedName, bpoint_info);
 			response.breakpoints.push_back(bpoint_info.bpoint);
 			continue;
 		}
@@ -361,7 +357,7 @@ void BreakpointManager::ClearBreakpoints(bool emitChanged)
 	if (emitChanged)
 	{
 		std::vector<int> refs;
-		m_breakpoints.for_each_m([&](const BreakpointsMap::value_type &kv)
+		m_breakpoints.visit_all([&](const BreakpointsMap::value_type &kv)
 		{
 			for (auto bpointInfo : kv.second)
 			{
@@ -379,7 +375,7 @@ void BreakpointManager::ClearBreakpoints(bool emitChanged)
 void BreakpointManager::ClearBreakpointsType(BreakpointInfo::Type type)
 {
 	std::vector<void *> toRemove;
-	m_breakpoints.for_each_m([&](const BreakpointsMap::value_type &KV)
+	m_breakpoints.visit_all([&](BreakpointsMap::value_type &KV)
 	{
 		auto bpinfos = KV.second;
 		for (int64_t i = bpinfos.size() - 1; i >= 0; i--)
@@ -403,7 +399,7 @@ void BreakpointManager::ClearBreakpointsType(BreakpointInfo::Type type)
 void BreakpointManager::ClearBreakpointsForScript(int ref, BreakpointInfo::Type type, bool emitChanged)
 {
 	std::vector<void *> toRemove;
-	m_breakpoints.for_each_m([&](const BreakpointsMap::value_type &KV)
+	m_breakpoints.visit_all([&](const BreakpointsMap::value_type &KV)
 	{
 		auto bpinfos = KV.second;
 		for (int64_t i = bpinfos.size() - 1; i >= 0; i--)
@@ -451,14 +447,14 @@ void BreakpointManager::SetBPStoppedEventInfo(VMFrameStack *stack, dap::StoppedE
 	}
 	auto frame = stack->TopFrame();
 	std::string description = "Paused on breakpoint";
-	m_breakpoints.if_contains((void *)frame->PC, [&](const BreakpointsMap::value_type &kv)
+	m_breakpoints.visit((void *)frame->PC, [&](const BreakpointsMap::value_type &kv)
 	{
 		for (auto &bpoint : kv.second)
 		{
 			breakpoints.push_back(bpoint.bpoint.id.value(-1));
 		}
 	});
-	IsAtNativeBreakpoint(stack) && m_nativeFunctionBreakpoints.if_contains(GetCalledFunction(frame)->QualifiedName, [&](const NativeFunctionBreakpointsMap::value_type &kv)
+	IsAtNativeBreakpoint(stack) && m_nativeFunctionBreakpoints.visit(GetCalledFunction(frame)->QualifiedName, [&](const NativeFunctionBreakpointsMap::value_type &kv)
 	{
 		auto func = GetCalledFunction(frame);
 		auto &bpoint_info = kv.second;

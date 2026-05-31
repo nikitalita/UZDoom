@@ -31,7 +31,7 @@
 
 #include "PexCache.h"
 
-#include <gtl/phmap.hpp>
+#include "boost_concurrent.hpp"
 
 namespace DebugServer
 {
@@ -87,8 +87,8 @@ class BreakpointManager
 	void SetBPStoppedEventInfo(VMFrameStack *stack, dap::StoppedEvent &event);
 	private:
 
-	using BreakpointsMap = gtl::parallel_flat_hash_map<void *, std::vector<BreakpointInfo>>;
-	using NativeFunctionBreakpointsMap = gtl::parallel_flat_hash_map<std::string_view, BreakpointInfo, gtl::priv::HashEq<std::string_view>::Hash, ci_less>;
+	using BreakpointsMap = boost::concurrent_flat_map<void *, std::vector<BreakpointInfo>>;
+	using NativeFunctionBreakpointsMap = boost::concurrent_flat_map<std::string_view, BreakpointInfo, boost::hash<std::string_view>, std::equal_to<std::string_view>>;
 
 	PexCache *m_pexCache;
 	BreakpointsMap m_breakpoints;
