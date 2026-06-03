@@ -488,7 +488,7 @@ struct VMLocalVariable
 class VMScriptFunction : public VMFunction
 {
 public:
-	VMScriptFunction(FName name = NAME_None);
+	VMScriptFunction(FName name, FString sourceFileName);
 	~VMScriptFunction();
 	void Alloc(int numops, int numkonstd, int numkonstf, int numkonsts, int numkonsta, int numlinenumbers);
 

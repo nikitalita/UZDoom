@@ -70,6 +70,9 @@ public:
 	{
 		const char *SavedScriptPtr;
 		int SavedScriptLine;
+		int SavedScriptColumn;
+		int SavedEndScriptLine;
+		int SavedEndScriptColumn;
 	};
 
 	struct Symbol
@@ -233,6 +236,9 @@ public:
 	int64_t BigNumber;
 	double Float;
 	int Line;
+	int Column;
+	int EndLine;
+	int EndColumn;
 	bool End;
 	bool ParseError = false;
 	bool Crossed;
@@ -258,6 +264,7 @@ protected:
 	FString BigStringBuffer;
 	bool AlreadyGot;
 	int AlreadyGotLine;
+	int AlreadyGotColumn;
 	bool LastGotToken;
 	const char *LastGotPtr;
 	int LastGotLine;
@@ -318,14 +325,16 @@ struct FScriptPosition
 	static bool errorout;
 	FName FileName;
 	int ScriptLine;
+	int ScriptColumn;
 
 	FScriptPosition()
 	{
 		FileName = NAME_None;
 		ScriptLine=0;
+		ScriptColumn=0;
 	}
 	FScriptPosition(const FScriptPosition &other) = default;
-	FScriptPosition(FString fname, int line);
+	FScriptPosition(FString fname, int line, int column);
 	FScriptPosition(FScanner &sc);
 	FScriptPosition &operator=(const FScriptPosition &other) = default;
 	FScriptPosition &operator=(FScanner &sc);

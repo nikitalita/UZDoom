@@ -476,7 +476,9 @@ public:
 			f->CreateRegUse();
 		}
 	}
+	using MapType = TMap<FString, TArray<VMFunction *>>;
 	static TArray<VMFunction *> AllFunctions;
+	static MapType FunctionMap;
 protected:
 	void CreateRegUse();
 };

@@ -28,6 +28,12 @@
 #include "sc_man.h"
 #include "types.h"
 
+struct ZCCSourceLoc
+{
+	int line;
+	int column;
+};
+
 struct ZCCToken
 {
 	template <typename... Ts>
@@ -56,7 +62,7 @@ struct ZCCToken
 		FString *String;
 		TLargest<decltype(Int), decltype(Float), decltype(String)>::Type Largest;
 	};
-	int SourceLoc;
+	ZCCSourceLoc SourceLoc;
 
 	ENamedName Name() { return ENamedName(Int); }
 };
@@ -236,7 +242,9 @@ struct ZCC_TreeNode
 	// destruct if we did that.
 	FString *SourceName;
 	int SourceLump;
-	int SourceLoc;
+	ZCCSourceLoc SourceLoc;
+
+	ZCCSourceLoc EndSourceLoc;
 
 	// Node type is one of the node types above, which corresponds with
 	// one of the structures below.

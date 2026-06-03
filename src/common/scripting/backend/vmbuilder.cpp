@@ -821,8 +821,7 @@ VMFunction *FFunctionBuildList::AddFunction(PNamespace *gnspc, const VersionInfo
 	it.Func = functype;
 	it.Code = code;
 	it.PrintableName = name;
-	it.Function = new VMScriptFunction;
-	it.Function->Name = functype->SymbolName;
+	it.Function = new VMScriptFunction(functype->SymbolName, fileSystem.GetFileFullName(lumpnum));
 	it.Function->QualifiedName = it.Function->PrintableName = ClassDataAllocator.Strdup(name.GetChars());
 	it.Function->ImplicitArgs = functype->GetImplicitArgs();
 	it.Proto = nullptr;

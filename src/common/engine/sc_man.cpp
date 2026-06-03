@@ -236,6 +236,9 @@ void FScanner::PrepareScript ()
 	ScriptPtr = ScriptBuffer.GetChars();
 	ScriptEndPtr = ScriptBuffer.GetChars() + ScriptBuffer.Len();
 	Line = 1;
+	Column = 1;
+	EndLine = 1;
+	EndColumn = 1;
 	End = false;
 	ScriptOpen = true;
 	String = StringBuffer;
@@ -289,6 +292,9 @@ const FScanner::SavedPos FScanner::SavePos ()
 		pos.SavedScriptPtr = ScriptPtr;
 	}
 	pos.SavedScriptLine = Line;
+	pos.SavedScriptColumn = Column;
+	pos.SavedEndScriptLine = EndLine;
+	pos.SavedEndScriptColumn = EndColumn;
 	return pos;
 }
 
@@ -306,6 +312,9 @@ void FScanner::RestorePos (const FScanner::SavedPos &pos)
 	{
 		ScriptPtr = pos.SavedScriptPtr;
 		Line = pos.SavedScriptLine;
+		Column = pos.SavedScriptColumn;
+		EndLine = pos.SavedEndScriptLine;
+		EndColumn = pos.SavedEndScriptColumn;
 		End = false;
 	}
 	else
@@ -1057,6 +1066,11 @@ int FScanner::GetMessageLine()
 	return AlreadyGot? AlreadyGotLine : Line;
 }
 
+int FScanner::GetMessageColumn()
+{
+	return AlreadyGot? AlreadyGotColumn : Column;
+}
+
 //==========================================================================
 //
 // FScanner::ScriptError
@@ -1245,16 +1259,18 @@ bool FScriptPosition::StrictErrors;	// makes all OPTERROR messages real errors.
 bool FScriptPosition::errorout;		// call I_Error instead of printing the error itself.
 
 
-FScriptPosition::FScriptPosition(FString fname, int line)
+FScriptPosition::FScriptPosition(FString fname, int line, int column)
 {
 	FileName = fname;
 	ScriptLine = line;
+	ScriptColumn = column;
 }
 
 FScriptPosition::FScriptPosition(FScanner &sc)
 {
 	FileName = sc.ScriptName;
 	ScriptLine = sc.GetMessageLine();
+	ScriptColumn = sc.GetMessageColumn();
 }
 
 FScriptPosition &FScriptPosition::operator=(FScanner &sc)
