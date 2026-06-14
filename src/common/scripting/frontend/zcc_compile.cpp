@@ -705,7 +705,7 @@ void ZCCCompiler::MessageV(ZCC_TreeNode *node, const char *txtcolor, const char 
 {
 	FString composed;
 
-	composed.Format("%s%s, line %d: ", txtcolor, node->SourceName->GetChars(), node->SourceLoc.Line);
+	composed.Format("%s%s, line %d:%d: ", txtcolor, node->SourceName->GetChars(), node->SourceLoc.Line, node->SourceLoc.Column);
 	composed.VAppendFormat(msg, argptr);
 	composed += '\n';
 	PrintString(PRINT_HIGH, composed.GetChars());
