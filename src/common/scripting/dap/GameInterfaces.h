@@ -963,7 +963,7 @@ static FrameLocalsState GetLocalsState(const VMFrame *p_stackFrame)
 	VMScriptFunction *func = GetVMScriptFunction(p_stackFrame->Func);
 	auto locals = func->GetLocalVariableBlocksAt(p_stackFrame->PC);
 	auto pfunc = GetFunctionSymbol(p_stackFrame->Func);
-	PFunction::Variant *var = GetFunctionVariant(p_stackFrame->Func);
+	PFunction::Variant *var = pfunc ? &pfunc->Variants[0] : nullptr;
 
 	for (int paramidx = 0; paramidx < (int64_t)p_stackFrame->Func->Proto->ArgumentTypes.size(); paramidx++)
 	{

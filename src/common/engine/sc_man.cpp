@@ -1281,9 +1281,10 @@ bool FScriptPosition::StrictErrors;	// makes all OPTERROR messages real errors.
 bool FScriptPosition::errorout;		// call I_Error instead of printing the error itself.
 
 
-FScriptPosition::FScriptPosition(FString fname, int line, int column, int endline, int endcolumn)
+FScriptPosition::FScriptPosition(FString fname, int lumpnum, int line, int column, int endline, int endcolumn)
 {
 	FileName = fname;
+	LumpNum = lumpnum;
 	ScriptLine = line;
 	ScriptColumn = column;
 	if (endline == 0) endline = line;
@@ -1292,9 +1293,10 @@ FScriptPosition::FScriptPosition(FString fname, int line, int column, int endlin
 	EndScriptColumn = endcolumn;
 }
 
-FScriptPosition::FScriptPosition(FString fname, const ScriptLoc &loc)
+FScriptPosition::FScriptPosition(FString fname, int lumpnum, const ScriptLoc &loc)
 {
 	FileName = fname;
+	LumpNum = lumpnum;
 	ScriptLine = loc.Line;
 	ScriptColumn = loc.Column;
 	EndScriptLine = loc.EndLine;
@@ -1304,6 +1306,7 @@ FScriptPosition::FScriptPosition(FString fname, const ScriptLoc &loc)
 FScriptPosition::FScriptPosition(FScanner &sc)
 {
 	FileName = sc.ScriptName;
+	LumpNum = sc.LumpNum;
 	ScriptLine = sc.GetMessageLine();
 	ScriptColumn = sc.GetMessageColumn();
 	EndScriptLine = sc.GetMessageEndLine();
@@ -1313,6 +1316,7 @@ FScriptPosition::FScriptPosition(FScanner &sc)
 FScriptPosition &FScriptPosition::operator=(FScanner &sc)
 {
 	FileName = sc.ScriptName;
+	LumpNum = sc.LumpNum;
 	ScriptLine = sc.GetMessageLine();
 	ScriptColumn = sc.GetMessageColumn();
 	EndScriptLine = sc.GetMessageEndLine();

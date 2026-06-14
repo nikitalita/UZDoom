@@ -255,7 +255,7 @@ struct ZCC_TreeNode
 
 	operator FScriptPosition()
 	{
-		return FScriptPosition(*SourceName, SourceLoc);
+		return FScriptPosition(*SourceName, SourceLump, SourceLoc);
 	}
 
 };
