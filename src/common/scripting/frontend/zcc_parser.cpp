@@ -325,7 +325,7 @@ static void ParseSingleFile(FScanner *pSC, const char *filename, int lump, void 
 	while (sc.GetToken())
 	{
 		value.Largest = 0;
-		value.SourceLoc = sc.GetMessageLine();
+		value.SetSourceLoc(sc);
 		switch (sc.TokenType)
 		{
 		case TK_StringConst:
@@ -502,7 +502,7 @@ PNamespace *ParseOneScript(const int baselump, ZCCParseState &state)
 	IncludeLocs.ShrinkToFit();
 
 	value.Int = -1;
-	value.SourceLoc = sc.GetMessageLine();
+	value.SetSourceLoc(sc);
 	ZCCParse(parser, 0, value, &state);
 	ZCCParseFree(parser, free);
 
@@ -560,6 +560,63 @@ static FString ZCCTokenName(int terminal)
 	return FScanner::TokenName(sc_token);
 }
 
+void ZCCToken::SetSourceLoc(const FScanner &sc)
+{
+	SourceLoc = sc.GetMessageLoc();
+}
+
+void ZCCToken::SetSourceLoc(const ZCCToken &token)
+{
+	SourceLoc = token.SourceLoc;
+}
+
+void ZCCToken::SetSourceLoc(const ZCCToken &begin, const ZCCToken &end)
+{
+	SetSourceLoc(begin.SourceLoc, end.SourceLoc);
+}
+
+void ZCCToken::SetSourceLoc(const ScriptLoc &loc, const ScriptLoc &end)
+{
+	SourceLoc.SetBeginEnd(loc, end);
+}
+
+void ZCC_TreeNode::SetSourceLoc(const FScanner &sc)
+{
+	SourceLoc = sc.GetMessageLoc();
+}
+
+void ZCC_TreeNode::SetSourceLoc(const ZCCToken &token)
+{
+	SourceLoc = token.SourceLoc;
+}
+
+void ZCC_TreeNode::SetSourceLoc(const ScriptLoc &begin, const ScriptLoc &end)
+{
+	SourceLoc.SetBeginEnd(begin, end);
+}
+
+void ZCC_TreeNode::SetSourceLoc(const ZCCToken &begin, const ZCCToken &end)
+{
+	SourceLoc.SetBeginEnd(begin.SourceLoc, end.SourceLoc);
+}
+
+void ZCC_TreeNode::SetSourceLoc(ZCC_TreeNode *node)
+{
+	SourceLoc = node->SourceLoc;
+}
+
+void ZCC_TreeNode::SetSourceLoc(ZCC_TreeNode *begin, ZCC_TreeNode *end)
+{
+	if (begin == nullptr && end == nullptr) {
+		I_Error("Fatal parse error");
+	} else if (begin == nullptr) {
+		begin = end;
+	} else if (end == nullptr) {
+		end = begin;
+	}
+	SourceLoc.SetBeginEnd(begin->SourceLoc, end->SourceLoc);
+}
+
 ZCC_TreeNode *ZCC_AST::InitNode(size_t size, EZCCTreeNodeType type, ZCC_TreeNode *basis)
 {
 	ZCC_TreeNode *node = (ZCC_TreeNode *)SyntaxArena.Alloc(size);
@@ -612,6 +669,7 @@ void AppendTreeNodeSibling(ZCC_TreeNode *thisnode, ZCC_TreeNode *sibling)
 		sibling->SiblingPrev = SiblingPrev;
 		SiblingPrev = siblingend;
 		siblingend->SiblingNext = thisnode;
+		thisnode->SetSourceLoc(thisnode, sibling);
 }
 
 //**---------------------------------------------------------------------------

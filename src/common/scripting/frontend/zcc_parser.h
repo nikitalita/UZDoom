@@ -56,7 +56,11 @@ struct ZCCToken
 		FString *String;
 		TLargest<decltype(Int), decltype(Float), decltype(String)>::Type Largest;
 	};
-	int SourceLoc;
+	ScriptLoc SourceLoc;
+	void SetSourceLoc(const FScanner &sc);
+	void SetSourceLoc(const ZCCToken &token);
+	void SetSourceLoc(const ZCCToken &begin, const ZCCToken &end);
+	void SetSourceLoc(const ScriptLoc &loc, const ScriptLoc &end);
 
 	ENamedName Name() { return ENamedName(Int); }
 };
@@ -236,11 +240,18 @@ struct ZCC_TreeNode
 	// destruct if we did that.
 	FString *SourceName;
 	int SourceLump;
-	int SourceLoc;
+	ScriptLoc SourceLoc;
 
 	// Node type is one of the node types above, which corresponds with
 	// one of the structures below.
 	EZCCTreeNodeType NodeType;
+
+	void SetSourceLoc(const FScanner &sc);
+	void SetSourceLoc(const ZCCToken &token);
+	void SetSourceLoc(const ScriptLoc &startLoc, const ScriptLoc &endLoc);
+	void SetSourceLoc(const ZCCToken &begin, const ZCCToken &end);
+	void SetSourceLoc(ZCC_TreeNode *node);
+	void SetSourceLoc(ZCC_TreeNode *begin, ZCC_TreeNode *end);
 
 	operator FScriptPosition()
 	{
