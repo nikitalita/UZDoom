@@ -358,7 +358,6 @@ void FxExpression::EmitStatement(VMFunctionBuilder *build)
 	build->EndStatement();
 }
 
-
 //==========================================================================
 //
 //
@@ -5094,7 +5093,9 @@ ExpEmit FxBinaryLogical::Emit(VMFunctionBuilder *build)
 
 	for (unsigned i = 0; i < list.Size(); i++)
 	{
+		build->BeginStatement(list[i]);
 		list[i]->EmitCompare(build, invert, yes, no);
+		build->EndStatement();
 	}
 	build->BackpatchListToHere(yes);
 	ExpEmit to(build, REGT_INT);
@@ -5456,10 +5457,13 @@ ExpEmit FxConditional::Emit(VMFunctionBuilder *build)
 	// same temporary instead of being copied to it. Oh well; good enough
 	// for now.
 	TArray<size_t> yes, no;
+	build->BeginStatement(condition);
 	condition->EmitCompare(build, false, yes, no);
+	build->EndStatement();
 
 	build->BackpatchListToHere(yes);
 
+	build->BeginStatement(truex);
 	if (truex->isConstant() && truex->ValueType->GetRegType() == REGT_INT)
 	{
 		out = ExpEmit(build, REGT_INT);
@@ -5501,10 +5505,12 @@ ExpEmit FxConditional::Emit(VMFunctionBuilder *build)
 			else out = trueop;
 		}
 	}
+	build->EndStatement();
 	// Make sure to skip the false path.
 	truejump = build->Emit(OP_JMP, 0);
 
 	// Evaluate false expression.
+	build->BeginStatement(falsex);
 	build->BackpatchListToHere(no);
 	if (falsex->isConstant() && falsex->ValueType->GetRegType() == REGT_INT)
 	{
@@ -5540,6 +5546,7 @@ ExpEmit FxConditional::Emit(VMFunctionBuilder *build)
 		}
 	}
 	build->BackpatchToHere(truejump);
+	build->EndStatement();
 
 	return out;
 }
@@ -11398,7 +11405,9 @@ ExpEmit FxIfStatement::Emit(VMFunctionBuilder *build)
 	bool whenTrueReturns = false;
 
 	TArray<size_t> yes, no;
+	build->BeginStatement(Condition);
 	Condition->EmitCompare(build, WhenTrue == nullptr, yes, no);
+	build->EndStatement();
 
 	if (WhenTrue != nullptr)
 	{
@@ -11539,7 +11548,9 @@ ExpEmit FxWhileLoop::Emit(VMFunctionBuilder *build)
 	loopstart = build->GetAddress();
 	if (!Condition->isConstant())
 	{
+		build->BeginStatement(Condition);
 		Condition->EmitCompare(build, false, yes, no);
+		build->EndStatement();
 	}
 	else assert(static_cast<FxConstant *>(Condition)->GetValue().GetBool() == true);
 
@@ -11630,7 +11641,9 @@ ExpEmit FxDoWhileLoop::Emit(VMFunctionBuilder *build)
 	if (!Condition->isConstant())
 	{
 		TArray<size_t> yes, no;
+		build->BeginStatement(Condition);
 		Condition->EmitCompare(build, true, yes, no);
+		build->EndStatement();
 		build->BackpatchList(no, codestart);
 		build->BackpatchListToHere(yes);
 	}
@@ -11725,7 +11738,9 @@ ExpEmit FxForLoop::Emit(VMFunctionBuilder *build)
 	codestart = build->GetAddress();
 	if (Condition != nullptr)
 	{
+		build->BeginStatement(Condition);
 		Condition->EmitCompare(build, false, yes, no);
+		build->EndStatement();
 	}
 
 	build->BackpatchListToHere(yes);
