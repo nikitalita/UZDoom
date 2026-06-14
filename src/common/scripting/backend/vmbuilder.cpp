@@ -799,7 +799,7 @@ void VMFunctionBuilder::BackpatchListToHere(TArray<size_t> &locs)
 //==========================================================================
 FFunctionBuildList FunctionBuildList;
 
-VMFunction *FFunctionBuildList::AddFunction(PNamespace *gnspc, const VersionInfo &ver, PFunction *functype, FxExpression *code, const FString &name, bool fromdecorate, int stateindex, int statecount, int lumpnum)
+VMFunction *FFunctionBuildList::AddFunction(PNamespace *gnspc, const VersionInfo &ver, PFunction *functype, FxExpression *code, const FString &name, bool fromdecorate, int stateindex, int statecount, int lumpnum, int sourcefile)
 {
 	if (code != nullptr)
 	{
@@ -821,7 +821,7 @@ VMFunction *FFunctionBuildList::AddFunction(PNamespace *gnspc, const VersionInfo
 	it.Func = functype;
 	it.Code = code;
 	it.PrintableName = name;
-	it.Function = new VMScriptFunction(functype->SymbolName, lumpnum);
+	it.Function = new VMScriptFunction(functype->SymbolName, sourcefile);
 	it.Function->QualifiedName = it.Function->PrintableName = ClassDataAllocator.Strdup(name.GetChars());
 	it.Function->ImplicitArgs = functype->GetImplicitArgs();
 	it.Proto = nullptr;
@@ -926,6 +926,7 @@ void FFunctionBuildList::Build()
 			// Emit code
 			try
 			{
+				assert(sfunc->SourceFileName == FString(item.Code->ScriptPosition.FileName.GetChars()));
 				sfunc->SourceFileName = item.Code->ScriptPosition.FileName.GetChars();	// remember the file name for printing error messages if something goes wrong in the VM.
 				buildit.BeginStatement(item.Code);
 				item.Code->Emit(&buildit);

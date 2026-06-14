@@ -702,7 +702,7 @@ void ZCCDoomCompiler::ProcessDefaultProperty(PClassActor *cls, ZCC_PropertyStmt 
 		if (namenode->Id == NAME_DamageFunction)
 		{
 			auto x = ConvertNode(prop->Values);
-			CreateDamageFunction(OutNamespace, mVersion, cls, (AActor *)bag.Info->Defaults, x, false, Lump);
+			CreateDamageFunction(OutNamespace, mVersion, cls, (AActor *)bag.Info->Defaults, x, false, bag.Lumpnum, bag.ScriptPosition.LumpNum);
 			((AActor *)bag.Info->Defaults)->DamageVal = -1;
 			return;
 		}
@@ -1149,7 +1149,7 @@ void ZCCDoomCompiler::CompileStates()
 						if (code != nullptr)
 						{
 							auto funcsym = CreateAnonymousFunction(c->Type(), nullptr, state.UseFlags);
-							state.ActionFunc = FunctionBuildList.AddFunction(OutNamespace, mVersion, funcsym, code, FStringf("%s.StateFunction.%d", c->Type()->TypeName.GetChars(), statedef.GetStateCount()), false, statedef.GetStateCount(), (int)sl->Frames->Len(), Lump);
+							state.ActionFunc = FunctionBuildList.AddFunction(OutNamespace, mVersion, funcsym, code, FStringf("%s.StateFunction.%d", c->Type()->TypeName.GetChars(), statedef.GetStateCount()), false, statedef.GetStateCount(), (int)sl->Frames->Len(), Lump, sl->Action->SourceLump);
 						}
 					}
 

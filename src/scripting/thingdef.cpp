@@ -225,7 +225,7 @@ PFunction *CreateAnonymousFunction(PContainerType *containingclass, PType *retur
 //
 //==========================================================================
 
-void CreateDamageFunction(PNamespace *OutNamespace, const VersionInfo &ver, PClassActor *info, AActor *defaults, FxExpression *id, bool fromDecorate, int lumpnum)
+void CreateDamageFunction(PNamespace *OutNamespace, const VersionInfo &ver, PClassActor *info, AActor *defaults, FxExpression *id, bool fromDecorate, int lumpnum, int sourcefile)
 {
 	if (id == nullptr)
 	{
@@ -235,7 +235,7 @@ void CreateDamageFunction(PNamespace *OutNamespace, const VersionInfo &ver, PCla
 	{
 		auto dmg = new FxReturnStatement(new FxIntCast(id, true), id->ScriptPosition);
 		auto funcsym = CreateAnonymousFunction(info->VMType, TypeSInt32, 0);
-		defaults->DamageFunc = FunctionBuildList.AddFunction(OutNamespace, ver, funcsym, dmg, FStringf("%s.DamageFunction", info->TypeName.GetChars()), fromDecorate, -1, 0, lumpnum);
+		defaults->DamageFunc = FunctionBuildList.AddFunction(OutNamespace, ver, funcsym, dmg, FStringf("%s.DamageFunction", info->TypeName.GetChars()), fromDecorate, -1, 0, lumpnum, sourcefile);
 	}
 }
 

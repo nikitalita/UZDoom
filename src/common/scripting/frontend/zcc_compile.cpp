@@ -2869,7 +2869,7 @@ void ZCCCompiler::CompileFunction(ZCC_StructWork *c, ZCC_FuncDeclarator *f, bool
 			}
 
 			FxExpression* code = f->Body != nullptr ? ConvertAST(c->Type(), f->Body) : nullptr;
-			newfunc = FunctionBuildList.AddFunction(OutNamespace, mVersion, sym, code, FStringf("%s.%s", c->Type()->TypeName.GetChars(), FName(f->Name).GetChars()), false, -1, 0, Lump);
+			newfunc = FunctionBuildList.AddFunction(OutNamespace, mVersion, sym, code, FStringf("%s.%s", c->Type()->TypeName.GetChars(), FName(f->Name).GetChars()), false, -1, 0, Lump, f->SourceLump);
 		}
 		if (sym->Variants[0].Implementation != nullptr && hasdefault)	// do not copy empty default lists, they only waste space and processing time.
 		{

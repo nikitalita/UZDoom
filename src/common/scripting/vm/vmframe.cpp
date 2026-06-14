@@ -114,7 +114,7 @@ VMScriptFunction::VMScriptFunction(FName name, int fileno) : VMFunction(name)
 {
 	if (fileno > 0)
 	{
-		SourceFileName = fileSystem.GetFileFullName(fileno);
+		SourceFileName = fileSystem.GetFileFullPath(fileno);
 		VMFunction::FileToFunctionMap.TryEmplace(fileno, TArray<VMFunction *>()).Push(this);
 	}
 	LineInfo = nullptr;
