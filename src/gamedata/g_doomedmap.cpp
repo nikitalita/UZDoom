@@ -174,7 +174,7 @@ void FMapInfoParser::ParseDoomEdNums()
 			memset(editem.args, 0, sizeof(editem.args));
 			editem.argsdefined = 0;
 			editem.noskillflags = false;
-			editem.linenum = sc.Line;
+			editem.linenum = sc.Loc.Line;
 
 			int minargs = 0;
 			int maxargs = 5;
@@ -389,7 +389,7 @@ static void ParseSpawnMap(FScanner &sc, SpawnMap & themap, const char *descript)
 			}
 			defined[ednum] = true;
 			editem.classname = sc.String;
-			editem.linenum = sc.Line;
+			editem.linenum = sc.Loc.Line;
 
 			themap.Insert(ednum, editem);
 		}

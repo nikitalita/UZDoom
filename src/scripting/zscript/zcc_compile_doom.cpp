@@ -894,8 +894,7 @@ void ZCCDoomCompiler::InitDefaults()
 						switch (content->NodeType)
 						{
 						case AST_PropertyStmt:
-							bag.ScriptPosition.FileName = *content->SourceName;
-							bag.ScriptPosition.ScriptLine = content->SourceLoc;
+							bag.ScriptPosition = *content;
 							ProcessDefaultProperty(ti, static_cast<ZCC_PropertyStmt *>(content), bag);
 							break;
 

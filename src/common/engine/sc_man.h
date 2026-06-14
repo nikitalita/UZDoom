@@ -63,13 +63,50 @@ constexpr VersionInfo MakeVersion(unsigned int ma, unsigned int mi, unsigned int
 }
 
 
+struct ScriptLoc
+{
+	int Line;
+	int Column;
+	int EndLine;
+	int EndColumn;
+
+	inline void Zero() {
+		Line = 0;
+		Column = 0;
+		EndLine = 0;
+		EndColumn = 0;
+	}
+	inline bool IsValid() const { return Line > 0; }
+	inline void SetEnd(const ScriptLoc &end) {
+		if (!IsValid()) {
+			*this = end;
+		} else if (end.IsValid()) {
+			EndLine = end.EndLine;
+			EndColumn = end.EndColumn;
+		}
+	}
+	inline void SetBeginEnd(const ScriptLoc &begin, const ScriptLoc &end) {
+		if (!begin.IsValid()) {
+			*this = end;
+		} else {
+			*this = begin;
+			if (end.IsValid()) {
+				EndLine = end.EndLine;
+				EndColumn = end.EndColumn;
+			}
+		}
+	}
+};
+
 class FScanner
 {
 public:
 	struct SavedPos
 	{
 		const char *SavedScriptPtr;
-		int SavedScriptLine;
+		const char *SavedTokLineStartPtr;
+		const char *SavedCurLineStartPtr;
+		ScriptLoc SavedLoc;
 	};
 
 	struct Symbol
@@ -217,7 +254,11 @@ public:
 	}
 	int MatchString(const char * const *strings, size_t stride = sizeof(char*));
 	int MustMatchString(const char * const *strings, size_t stride = sizeof(char*));
-	int GetMessageLine();
+	const ScriptLoc& GetMessageLoc() const;
+	int GetMessageLine() const;
+	int GetMessageColumn() const;
+	int GetMessageEndLine() const;
+	int GetMessageEndColumn() const;
 
 	void ScriptError(const char *message, ...) GCCPRINTF(2,3);
 	void ScriptMessage(const char *message, ...) GCCPRINTF(2,3);
@@ -232,7 +273,7 @@ public:
 	int Number;
 	int64_t BigNumber;
 	double Float;
-	int Line;
+	ScriptLoc Loc;
 	bool End;
 	bool ParseError = false;
 	bool Crossed;
@@ -254,13 +295,17 @@ protected:
 	FString ScriptBuffer;
 	const char *ScriptPtr;
 	const char *ScriptEndPtr;
+	const char *TokLineStartPtr;
+	const char *CurLineStartPtr;
 	char StringBuffer[MAX_STRING_SIZE];
 	FString BigStringBuffer;
 	bool AlreadyGot;
-	int AlreadyGotLine;
+	ScriptLoc AlreadyGotLoc;
 	bool LastGotToken;
 	const char *LastGotPtr;
-	int LastGotLine;
+	const char * LastGotTokLineStartPtr;
+	const char * LastGotCurLineStartPtr;
+	ScriptLoc LastGotLoc;
 	bool CMode;
 	bool NoOctals = false;
 	bool NoFatalErrors = false;
@@ -318,14 +363,21 @@ struct FScriptPosition
 	static bool errorout;
 	FName FileName;
 	int ScriptLine;
+	int ScriptColumn;
+	int EndScriptLine;
+	int EndScriptColumn;
 
 	FScriptPosition()
 	{
 		FileName = NAME_None;
 		ScriptLine=0;
+		ScriptColumn=0;
+		EndScriptLine=0;
+		EndScriptColumn=0;
 	}
 	FScriptPosition(const FScriptPosition &other) = default;
-	FScriptPosition(FString fname, int line);
+	FScriptPosition(FString fname, int line, int column = 0, int endline = 0, int endcolumn = 0);
+	FScriptPosition(FString fname, const ScriptLoc &loc);
 	FScriptPosition(FScanner &sc);
 	FScriptPosition &operator=(const FScriptPosition &other) = default;
 	FScriptPosition &operator=(FScanner &sc);

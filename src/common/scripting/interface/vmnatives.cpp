@@ -1789,7 +1789,7 @@ DEFINE_ACTION_FUNCTION_NATIVE(DScriptScanner, SetNoFatalErrors, SetNoFatalErrors
 	return 0;
 }
 
-DEFINE_FIELD_NAMED_X(ScriptScanner, DScriptScanner, wrapped.Line, Line);
+DEFINE_FIELD_NAMED_X(ScriptScanner, DScriptScanner, wrapped.Loc.Line, Line);
 DEFINE_FIELD_NAMED_X(ScriptScanner, DScriptScanner, wrapped.Float, Float);
 DEFINE_FIELD_NAMED_X(ScriptScanner, DScriptScanner, wrapped.Number, Number);
 DEFINE_FIELD_NAMED_X(ScriptScanner, DScriptScanner, wrapped.End, End);
