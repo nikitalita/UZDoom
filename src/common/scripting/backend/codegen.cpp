@@ -11831,25 +11831,35 @@ FxExpression* FxForEachLoop::DoResolve(FCompileContext& ctx)
 		FName sizevar = "@size";
 		FName itvar = "@i";
 
-		auto block = new FxCompoundStatement(ScriptPosition);
-		auto arraysize = new FxMemberFunctionCall(Array, NAME_Size, {}, ScriptPosition);
-		auto size = new FxLocalVariableDeclaration(TypeSInt32, sizevar, arraysize, 0, ScriptPosition);
-		auto it = new FxLocalVariableDeclaration(TypeSInt32, itvar, new FxConstant(0, ScriptPosition), 0, ScriptPosition);
+		auto pos = Array->ScriptPosition;
+
+		auto block = new FxCompoundStatement(pos);
+		auto arraysize = new FxMemberFunctionCall(Array, NAME_Size, {}, pos);
+		auto size = new FxLocalVariableDeclaration(TypeSInt32, sizevar, arraysize, 0, pos);
+		auto it = new FxLocalVariableDeclaration(TypeSInt32, itvar, new FxConstant(0, pos), 0, pos);
 		block->Add(size);
 		block->Add(it);
 
-		auto cit = new FxLocalVariable(it, ScriptPosition);
-		auto csiz = new FxLocalVariable(size, ScriptPosition);
+		auto cit = new FxLocalVariable(it, pos);
+		auto csiz = new FxLocalVariable(size, pos);
 		auto comp = new FxCompareRel('<', cit, csiz); // new FxIdentifier(itvar, ScriptPosition), new FxIdentifier(sizevar, ScriptPosition));
 
-		auto iit = new FxLocalVariable(it, ScriptPosition);
+		auto iit = new FxLocalVariable(it, pos);
 		auto bump = new FxPreIncrDecr(iit, TK_Incr);
 
-		auto ait = new FxLocalVariable(it, ScriptPosition);
+		auto ait = new FxLocalVariable(it, pos);
 		auto access = new FxArrayElement(Array2, ait, true); // Note: Array must be a separate copy because these nodes cannot share the same element.
 
-		auto assign = new FxLocalVariableDeclaration(TypeAuto, loopVarName, access, 0, ScriptPosition);
-		auto body = new FxCompoundStatement(ScriptPosition);
+		auto assignPos = FScriptPosition(pos);
+		assignPos.ScriptLine = pos.EndScriptLine;
+		assignPos.ScriptColumn = pos.EndScriptColumn;
+		assignPos.EndScriptLine = pos.EndScriptLine;
+		assignPos.EndScriptColumn = pos.EndScriptColumn;
+		auto assign = new FxLocalVariableDeclaration(TypeAuto, loopVarName, access, 0, assignPos);
+		auto bodyPos = assignPos;
+		bodyPos.EndScriptLine = Code->ScriptPosition.EndScriptLine;
+		bodyPos.EndScriptColumn = Code->ScriptPosition.EndScriptColumn;
+		auto body = new FxCompoundStatement(bodyPos);
 		body->Add(assign);
 		body->Add(Code);
 		auto forloop = new FxForLoop(nullptr, comp, bump, body, ScriptPosition);
@@ -11933,13 +11943,14 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 
 	auto valType = is_iterator ? static_cast<PMapIterator*>(MapExpr->ValueType)->ValueType : static_cast<PMap*>(MapExpr->ValueType)->ValueType;
 	auto keyType = is_iterator ? static_cast<PMapIterator*>(MapExpr->ValueType)->KeyType : static_cast<PMap*>(MapExpr->ValueType)->KeyType;
+	auto mapExprPos = MapExpr->ScriptPosition;
 
-	auto v = new FxLocalVariableDeclaration(valType, valueVarName, nullptr, 0, ScriptPosition);
+	auto v = new FxLocalVariableDeclaration(valType, valueVarName, nullptr, 0, mapExprPos);
 	block->Add(v);
 
 	if(keyVarName != NAME_None)
 	{
-		auto k = new FxLocalVariableDeclaration(keyType, keyVarName, nullptr, 0, ScriptPosition);
+		auto k = new FxLocalVariableDeclaration(keyType, keyVarName, nullptr, 0, mapExprPos);
 		block->Add(k);
 	}
 
@@ -11963,14 +11974,14 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 
 		if(keyVarName != NAME_None)
 		{
-			inner_block->Add(new FxAssign(new FxIdentifier(keyVarName, ScriptPosition), new FxMemberFunctionCall(MapExpr, "GetKey", {}, ScriptPosition), true));
+			inner_block->Add(new FxAssign(new FxIdentifier(keyVarName, mapExprPos), new FxMemberFunctionCall(MapExpr, "GetKey", {}, mapExprPos), true));
 		}
 
-		inner_block->Add(new FxAssign(new FxIdentifier(valueVarName, ScriptPosition), new FxMemberFunctionCall(MapExpr2, "GetValue", {}, ScriptPosition), true));
+		inner_block->Add(new FxAssign(new FxIdentifier(valueVarName, mapExprPos), new FxMemberFunctionCall(MapExpr2, "GetValue", {}, mapExprPos), true));
 		inner_block->Add(Code);
 
-		auto reInit = new FxMemberFunctionCall(MapExpr3, "ReInit", {}, ScriptPosition);
-		block->Add(new FxIfStatement(reInit, new FxWhileLoop(new FxMemberFunctionCall(MapExpr4, "Next", {}, ScriptPosition), inner_block, ScriptPosition), nullptr, ScriptPosition));
+		auto reInit = new FxMemberFunctionCall(MapExpr3, "ReInit", {}, mapExprPos);
+		block->Add(new FxIfStatement(reInit, new FxWhileLoop(new FxMemberFunctionCall(MapExpr4, "Next", {}, mapExprPos), inner_block, ScriptPosition), nullptr, ScriptPosition));
 
 		MapExpr = MapExpr2 = MapExpr3 = MapExpr4 = Code = nullptr;
 		delete this;
@@ -11994,24 +12005,24 @@ FxExpression *FxTwoArgForEachLoop::Resolve(FCompileContext &ctx)
 		*/
 
 		PType * itType = NewMapIterator(keyType, valType);
-		auto it = new FxLocalVariableDeclaration(itType, "@it", nullptr, 0, ScriptPosition);
+		auto it = new FxLocalVariableDeclaration(itType, "@it", nullptr, 0, mapExprPos);
 		block->Add(it);
 
 		FArgumentList al_map;
 		al_map.Push(MapExpr);
 
-		block->Add(new FxMemberFunctionCall(new FxIdentifier("@it", ScriptPosition), "Init", std::move(al_map), ScriptPosition));
+		block->Add(new FxMemberFunctionCall(new FxIdentifier("@it", mapExprPos), "Init", std::move(al_map), mapExprPos));
 
 		auto inner_block = new FxCompoundStatement(ScriptPosition);
 
 		if(keyVarName != NAME_None)
 		{
-			inner_block->Add(new FxAssign(new FxIdentifier(keyVarName, ScriptPosition), new FxMemberFunctionCall(new FxIdentifier("@it", ScriptPosition), "GetKey", {}, ScriptPosition), true));
+			inner_block->Add(new FxAssign(new FxIdentifier(keyVarName, mapExprPos), new FxMemberFunctionCall(new FxIdentifier("@it", mapExprPos), "GetKey", {}, mapExprPos), true));
 		}
-		inner_block->Add(new FxAssign(new FxIdentifier(valueVarName, ScriptPosition), new FxMemberFunctionCall(new FxIdentifier("@it", ScriptPosition), "GetValue", {}, ScriptPosition), true));
+		inner_block->Add(new FxAssign(new FxIdentifier(valueVarName, mapExprPos), new FxMemberFunctionCall(new FxIdentifier("@it", mapExprPos), "GetValue", {}, mapExprPos), true));
 		inner_block->Add(Code);
 
-		block->Add(new FxWhileLoop(new FxMemberFunctionCall(new FxIdentifier("@it", ScriptPosition), "Next", {}, ScriptPosition), inner_block, ScriptPosition));
+		block->Add(new FxWhileLoop(new FxMemberFunctionCall(new FxIdentifier("@it", mapExprPos), "Next", {}, mapExprPos), inner_block, ScriptPosition));
 
 		delete MapExpr2;
 		delete MapExpr3;
@@ -12463,7 +12474,7 @@ FxExpression *FxClassTypeCast::Resolve(FCompileContext &ctx)
 				else ScriptPosition.Message(MSG_DEBUGLOG, "resolving '%s' as class name", clsname.GetChars());
 			}
 		}
-		FxExpression *x = new FxConstant(cls, to, ScriptPosition);
+		FxExpression *x = new FxConstant(cls, to, basex->ScriptPosition);
 		delete this;
 		return x;
 	}
