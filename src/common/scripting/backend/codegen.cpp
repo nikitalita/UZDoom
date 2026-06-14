@@ -10991,7 +10991,7 @@ ExpEmit FxCompoundStatement::Emit(VMFunctionBuilder *build)
 	// Release all local variables in this block.
 	for (auto l : LocalVars)
 	{
-		locals.Push({l->Name, l->ValueType, l->VarFlags, l->RegCount, l->RegNum, l->ScriptPosition.ScriptLine, l->StackOffset});
+		locals.Push({l->Name, l->ValueType, l->VarFlags, l->RegCount, l->RegNum, l->ScriptPosition.ScriptLine, l->ScriptPosition.ScriptColumn, l->ScriptPosition.EndScriptLine, l->ScriptPosition.EndScriptColumn, l->StackOffset});
 		l->Release(build);
 	}
 	auto end = build->GetAddress();

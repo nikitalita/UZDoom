@@ -199,6 +199,7 @@ static inline bool IsVMValueValid(const VMValue *val) { return !(!val || !val->a
 static inline bool isFStringValid(const FString &str)
 {
 	auto chars = str.GetChars();
+	if (!chars) return false;
 	// check the lower 32-bits of the char pointer
 	auto ptr = *(uint32_t *)&chars;
 	return ptr != 0;
@@ -575,6 +576,9 @@ struct LocalState
 	int RegNum = -1;
 	int RegCount = -1;
 	int Line = -1;
+	int Column = -1;
+	int EndLine = -1;
+	int EndColumn = -1;
 	VMValue Value;
 	bool invalid_value = false;
 	std::vector<LocalState> StructFields;
@@ -824,7 +828,8 @@ static StructInfo GetStructState(std::string struct_name, VMValue m_value, PType
 		{
 			if (!field || !struct_ptr)
 			{
-				m_structInfo.StructFields.push_back(LocalState {field_name, field->Type, static_cast<int>(field->Flags), -1, -1, -1, VMValue(), true, {}});
+				m_structInfo.StructFields.push_back(LocalState {field_name, field->Type, static_cast<int>(field->Flags), -1, -1, -1, -1,
+					-1, -1, VMValue(), true, {}});
 				continue;
 			}
 			auto offset = field->Offset;
@@ -834,7 +839,14 @@ static StructInfo GetStructState(std::string struct_name, VMValue m_value, PType
 			void *pointed_field = struct_ptr + offset;
 			bool invalid = false;
 			val = GetVMValue(pointed_field, type, field->BitValue);
-			m_structInfo.StructFields.push_back(LocalState {field_name, field->Type, static_cast<int>(field->Flags), -1, -1, -1, val, true, {}});
+			m_structInfo.StructFields.push_back(LocalState {
+				field_name,
+				field->Type,
+				static_cast<int>(field->Flags),
+				-1, -1,
+				-1, -1,
+				-1, -1,
+				val, true, {}});
 			// increment struct_ptr by fieldSize
 			if (curr_ptr)
 			{
@@ -971,7 +983,8 @@ static FrameLocalsState GetLocalsState(const VMFrame *p_stackFrame)
 			}
 		}
 
-		localState.m_locals.push_back(LocalState {name, type, 0, paramidx, type->RegCount, -1, val, invalid, {}});
+		localState.m_locals.push_back(LocalState {name, type, 0, paramidx, type->RegCount, -1, -1, -1,
+			-1, val, invalid, {}});
 	}
 	int specials = 0;
 	std::sort(
@@ -981,6 +994,18 @@ static FrameLocalsState GetLocalsState(const VMFrame *p_stackFrame)
 		{
 			if (a.RegNum == b.RegNum)
 			{
+				if (a.LineNumber == b.LineNumber)
+				{
+					if (a.EndLineNumber == b.EndLineNumber)
+					{
+						if (a.ColumnNumber == b.ColumnNumber)
+						{
+							return a.EndColumnNumber < b.EndColumnNumber;
+						}
+						return a.ColumnNumber < b.ColumnNumber;
+					}
+					return a.EndLineNumber < b.EndLineNumber;
+				}
 				return a.LineNumber < b.LineNumber;
 			}
 			return a.RegNum < b.RegNum;
@@ -1003,6 +1028,9 @@ static FrameLocalsState GetLocalsState(const VMFrame *p_stackFrame)
 				state.VarFlags = flags;
 				state.RegNum = local.RegNum;
 				state.Line = local.LineNumber;
+				state.Column = local.ColumnNumber;
+				state.EndLine = local.EndLineNumber;
+				state.EndColumn = local.EndColumnNumber;
 				state.invalid_value = true;
 				// stack-allocated variable
 				if (invalid_reg_num && local.type->RegType == REGT_NIL && local.StackOffset > -1 && local.StackOffset + local.type->Size <= func->StackSize)
