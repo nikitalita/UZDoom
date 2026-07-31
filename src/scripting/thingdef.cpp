@@ -47,7 +47,7 @@ void InitThingdef();
 // STATIC FUNCTION PROTOTYPES --------------------------------------------
 
 static TMap<FState *, FScriptPosition> StateSourceLines;
-static FScriptPosition unknownstatesource("unknown file", 0);
+static FScriptPosition unknownstatesource("unknown file", -1, 0, 0);
 
 EXTERN_CVAR(Bool, strictdecorate);
 EXTERN_CVAR(Bool, warningstoerrors);

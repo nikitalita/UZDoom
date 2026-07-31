@@ -332,6 +332,7 @@ struct FScriptPosition
 	static int Developer;
 	static bool errorout;
 	FName FileName;
+	int LumpNum;
 	int ScriptLine;
 	int ScriptColumn;
 	int EndScriptLine;
@@ -340,14 +341,15 @@ struct FScriptPosition
 	FScriptPosition()
 	{
 		FileName = NAME_None;
+		LumpNum = -1;
 		ScriptLine=0;
 		ScriptColumn=0;
 		EndScriptLine=0;
 		EndScriptColumn=0;
 	}
 	FScriptPosition(const FScriptPosition &other) = default;
-	FScriptPosition(FString fname, int line, int column = 0, int endline = 0, int endcolumn = 0);
-	FScriptPosition(FString fname, const ScriptLoc &loc);
+	FScriptPosition(FString fname, int lumpnum, int line, int column, int endline = 0, int endcolumn = 0);
+	FScriptPosition(FString fname, int lumpnum, const ScriptLoc &loc);
 	FScriptPosition(FScanner &sc);
 	FScriptPosition &operator=(const FScriptPosition &other) = default;
 	FScriptPosition &operator=(FScanner &sc);

@@ -304,8 +304,7 @@ do_stop:
 				ScriptCode = ParseActions(sc, state, statestring, bag, hasfinalret);
 				if (!hasfinalret && ScriptCode != nullptr)
 				{
-					FScriptPosition pos = FScriptPosition(sc.ScriptName, sc.GetMessageEndLine(), sc.GetMessageEndColumn());
-					static_cast<FxCompoundStatement *>(ScriptCode)->Add(new FxReturnStatement(nullptr, pos));
+					static_cast<FxCompoundStatement *>(ScriptCode)->Add(new FxReturnStatement(nullptr, FScriptPosition(sc)));
 				}
 				goto endofstate;
 			}

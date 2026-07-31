@@ -3048,7 +3048,7 @@ FxExpression *ZCCCompiler::ConvertAST(PContainerType *cls, ZCC_TreeNode *ast)
 	if (ast->NodeType == AST_ExprFuncCall)
 	{
 		auto cp = new FxCompoundStatement(*ast);
-		FScriptPosition pos = FScriptPosition(ast->SourceName->GetChars(), ast->SourceLoc.EndLine, ast->SourceLoc.EndColumn);
+		FScriptPosition pos = FScriptPosition(*ast->SourceName, ast->SourceLump, ast->SourceLoc.EndLine, ast->SourceLoc.EndColumn);
 		cp->Add(new FxReturnStatement(ConvertNode(ast), pos));
 		return cp;
 	}

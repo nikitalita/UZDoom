@@ -1115,7 +1115,7 @@ static void SetDehParams(FState *state, int codepointer, VMDisassemblyDumper &di
 		sfunc->Proto = funcsym->Variants[0].Proto;
 		sfunc->RegTypes = regts;	// These functions are built after running the script compiler so they don't get this info.
 		int codeSize = buildit.GetAddress();
-		FxFunctionCall expr(pstate->PatchName, NAME_None, FArgumentList(), FScriptPosition(pstate->PatchName, pstate->SourceLineNumber));
+		FxFunctionCall expr(pstate->PatchName, NAME_None, FArgumentList(), FScriptPosition(pstate->PatchName, pstate->PatchFileNum, pstate->SourceLineNumber, 1));
 		buildit.BeginStatement(&expr);
 		buildit.MakeFunction(sfunc);
 		buildit.EndStatement();
