@@ -267,7 +267,7 @@ static void ParseConstant (FScanner &sc, PSymbolTable *symt, PClassActor *cls, P
 				sym = Create<PSymbolConstNumeric>(symname, TypeFloat64);
 				sym->Float = val.GetFloat();
 			}
-			if (symt->AddSymbol (sym) == NULL)
+			if (symt->AddSymbol (sym, sc.LumpNum) == NULL)
 			{
 				delete sym;
 				sc.ScriptMessage ("'%s' is already defined in '%s'.",
@@ -324,7 +324,7 @@ static void ParseEnum (FScanner &sc, PSymbolTable *symt, PClassActor *cls, PName
 		}
 		PSymbolConstNumeric *sym = Create<PSymbolConstNumeric>(symname, TypeSInt32);
 		sym->Value = currvalue;
-		if (symt->AddSymbol (sym) == NULL)
+		if (symt->AddSymbol (sym, sc.LumpNum) == NULL)
 		{
 			delete sym;
 			sc.ScriptMessage ("'%s' is already defined in '%s'.",

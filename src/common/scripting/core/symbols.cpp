@@ -25,6 +25,8 @@
 #include <float.h>
 #include "dobject.h"
 
+#include "filesystem.h"
+#include "zcc_parser.h"
 #include "serializer.h"
 #include "types.h"
 #include "vm.h"
@@ -98,6 +100,16 @@ unsigned PFunction::AddVariant(PPrototype *proto, TArray<uint32_t> &argflags, TA
 	return Variants.Push(variant);
 }
 
+PSymbolType::PSymbolType(FName name, PType *ty)
+	: PSymbol(name, ty ? ty->mSourceFileNo : 0), Type(ty)
+{
+}
+
+PSymbolTreeNode::PSymbolTreeNode(FName name, ZCC_TreeNode *node)
+	: PSymbol(name, node ? node->SourceLump : 0), Node(node)
+{
+}
+
 //==========================================================================
 //
 //
@@ -126,9 +138,10 @@ PField::PField()
 {
 }
 
-PField::PField(FName name, PType *type, uint32_t flags, size_t offset, int bitvalue)
-	: PSymbol(name), Offset(offset), Type(type), Flags(flags)
+PField::PField(FName name, PType *type, uint32_t flags, size_t offset, int lumpnum, int bitvalue)
+	: PSymbol(name, lumpnum), Offset(offset), Type(type), Flags(flags)
 {
+	mDefFileNo = lumpnum <= 0 ? 0 : fileSystem.GetFileContainer(lumpnum);
 	if (bitvalue != 0)
 	{
 		BitValue = 0;
@@ -301,12 +314,15 @@ PSymbol *PSymbolTable::FindSymbolInTable(FName symname, PSymbolTable *&symtable)
 //
 //==========================================================================
 
-PSymbol *PSymbolTable::AddSymbol (PSymbol *sym)
+PSymbol *PSymbolTable::AddSymbol (PSymbol *sym, int fileno)
 {
 	// Symbols that already exist are not inserted.
 	if (Symbols.CheckKey(sym->SymbolName) != nullptr)
 	{
 		return nullptr;
+	}
+	if (fileno > 0) {
+		sym->mSourceFileNo = fileno;
 	}
 	Symbols.Insert(sym->SymbolName, sym);
 	sym->Release();	// no more GC, please!
@@ -323,7 +339,8 @@ PField *PSymbolTable::AddField(FName name, PType *type, uint32_t flags, unsigned
 {
 	PField *field = Create<PField>(name, type, flags);
 
-	field->mDefFileNo = fileno;
+	field->mSourceFileNo = fileno;
+	field->mDefFileNo = fileno <= 0 ? 0 : fileSystem.GetFileContainer(fileno);
 
 	// The new field is added to the end of this struct, alignment permitting.
 	field->Offset = (Size + (type->Align - 1)) & ~(type->Align - 1);
@@ -357,9 +374,10 @@ PField *PSymbolTable::AddField(FName name, PType *type, uint32_t flags, unsigned
 
 PField *PSymbolTable::AddNativeField(FName name, PType *type, size_t address, uint32_t flags, int bitvalue, int fileno)
 {
-	PField *field = Create<PField>(name, type, flags | VARF_Native | VARF_Transient | VARF_NoRollback, address, bitvalue);
+	PField *field = Create<PField>(name, type, flags | VARF_Native | VARF_Transient | VARF_NoRollback, address, fileno, bitvalue);
 
-	field->mDefFileNo = fileno;
+	field->mSourceFileNo = fileno;
+	field->mDefFileNo = fileno <= 0 ? 0 : fileSystem.GetFileContainer(fileno);
 
 	if (AddSymbol(field) == nullptr)
 	{ // name is already in use
@@ -475,7 +493,7 @@ void PSymbolTable::RemoveSymbol(PSymbol *sym)
 //
 //==========================================================================
 
-void PSymbolTable::ReplaceSymbol(PSymbol *newsym)
+void PSymbolTable::ReplaceSymbol(PSymbol *newsym, int fileno)
 {
 	// If a symbol with a matching name exists, take its place and return it.
 	PSymbol **symslot = Symbols.CheckKey(newsym->SymbolName);
@@ -485,6 +503,7 @@ void PSymbolTable::ReplaceSymbol(PSymbol *newsym)
 		delete oldsym;
 		*symslot = newsym;
 	}
+	if (fileno > 0) newsym->mSourceFileNo = fileno;
 	// Else, just insert normally and return nullptr since there was no
 	// symbol to replace.
 	newsym->Release();	// no more GC, please!

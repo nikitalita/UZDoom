@@ -130,7 +130,7 @@ bool ZCCDoomCompiler::CompileProperties(PClass *type, TArray<ZCC_Property *> &Pr
 			else qualifiedname.Format("@property@%s.%s", prefix.GetChars(), name.GetChars());
 
 			fields.ShrinkToFit();
-			if (!type->VMType->Symbols.AddSymbol(Create<PProperty>(qualifiedname, fields)))
+			if (!type->VMType->Symbols.AddSymbol(Create<PProperty>(qualifiedname, fields), p->SourceLump))
 			{
 				Error(id, "Unable to add property %s to class %s", FName(p->NodeName).GetChars(), type->TypeName.GetChars());
 			}
@@ -194,7 +194,7 @@ bool ZCCDoomCompiler::CompileFlagDefs(PClass *type, TArray<ZCC_FlagDef *> &Prope
 						qualifiedname.Format("@flagdef@%s.%s", prefix.GetChars(), name.GetChars());
 					}
 
-					if (!type->VMType->Symbols.AddSymbol(Create<PPropFlag>(qualifiedname, field, p->BitValue, i == 0 && prefix != NAME_None)))
+					if (!type->VMType->Symbols.AddSymbol(Create<PPropFlag>(qualifiedname, field, p->BitValue, i == 0 && prefix != NAME_None), p->SourceLump))
 					{
 						Error(p, "Unable to add flag definition %s to class %s", FName(p->NodeName).GetChars(), type->TypeName.GetChars());
 					}

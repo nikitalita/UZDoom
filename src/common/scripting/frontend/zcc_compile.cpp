@@ -560,7 +560,7 @@ ZCCCompiler::ZCCCompiler(ZCC_AST &ast, DObject *_outer, PSymbolTable &_symbols, 
 					case AST_Enum:
 						zenumType = static_cast<ZCC_Enum *>(node);
 						enumType = NewEnum(zenumType->NodeName, OutNamespace, zenumType->SourceLump);
-						OutNamespace->Symbols.AddSymbol(Create<PSymbolType>(zenumType->NodeName, enumType));
+						OutNamespace->Symbols.AddSymbol(Create<PSymbolType>(zenumType->NodeName, enumType), zenumType->SourceLump);
 						break;
 
 					case AST_Class:
@@ -652,7 +652,7 @@ PSymbolTreeNode *ZCCCompiler::AddTreeNode(FName name, ZCC_TreeNode *node, PSymbo
 	else
 	{
 		auto sy = Create<PSymbolTreeNode>(name, node);
-		treenodes->AddSymbol(sy);
+		treenodes->AddSymbol(sy, node->SourceLump);
 		return sy;
 	}
 }
@@ -822,12 +822,12 @@ void ZCCCompiler::CreateStructTypes()
 			sf = FScopeBarrier::ChangeSideInObjectFlags(sf, FScopeBarrier::Side_Play);
 		}
 		s->strct->Symbol = Create<PSymbolType>(s->NodeName(), s->Type());
-		syms->AddSymbol(s->strct->Symbol);
+		syms->AddSymbol(s->strct->Symbol, s->strct->SourceLump);
 
 		for (auto e : s->Enums)
 		{
 			auto etype = NewEnum(e->NodeName, s->Type(), e->SourceLump);
-			s->Type()->Symbols.AddSymbol(Create<PSymbolType>(e->NodeName, etype));
+			s->Type()->Symbols.AddSymbol(Create<PSymbolType>(e->NodeName, etype), e->SourceLump);
 		}
 	}
 }
@@ -1021,7 +1021,7 @@ void ZCCCompiler::CreateClassTypes()
 				}
 
 				c->cls->Symbol = Create<PSymbolType>(c->NodeName(), c->Type());
-				OutNamespace->Symbols.AddSymbol(c->cls->Symbol);
+				OutNamespace->Symbols.AddSymbol(c->cls->Symbol, c->cls->SourceLump);
 				Classes.Push(c);
 				OrigClasses.Delete(i--);
 				donesomething = true;
@@ -1045,7 +1045,7 @@ void ZCCCompiler::CreateClassTypes()
 					// create a placeholder so that the compiler can continue looking for errors.
 					c->cls->Type = NewClassType(RUNTIME_CLASS(DObject)->FindClassTentative(c->NodeName()), c->cls->SourceLump);
 					c->cls->Symbol = Create<PSymbolType>(c->NodeName(), c->Type());
-					OutNamespace->Symbols.AddSymbol(c->cls->Symbol);
+					OutNamespace->Symbols.AddSymbol(c->cls->Symbol, c->cls->SourceLump);
 					Classes.Push(c);
 					OrigClasses.Delete(i--);
 					donesomething = true;
@@ -1061,7 +1061,7 @@ void ZCCCompiler::CreateClassTypes()
 		Error(c->cls, "Class %s has circular inheritance", FName(c->NodeName()).GetChars());
 		c->cls->Type = NewClassType(RUNTIME_CLASS(DObject)->FindClassTentative(c->NodeName()), c->cls->SourceLump);
 		c->cls->Symbol = Create<PSymbolType>(c->NodeName(), c->Type());
-		OutNamespace->Symbols.AddSymbol(c->cls->Symbol);
+		OutNamespace->Symbols.AddSymbol(c->cls->Symbol, c->cls->SourceLump);
 		Classes.Push(c);
 	}
 
@@ -1071,7 +1071,7 @@ void ZCCCompiler::CreateClassTypes()
 		for (auto e : cd->Enums)
 		{
 			auto etype = NewEnum(e->NodeName, cd->Type(), e->SourceLump);
-			cd->Type()->Symbols.AddSymbol(Create<PSymbolType>(e->NodeName, etype));
+			cd->Type()->Symbols.AddSymbol(Create<PSymbolType>(e->NodeName, etype), e->SourceLump);
 		}
 		// Link the tree node tables. We only can do this after we know the class relations.
 		for (auto cc : Classes)
@@ -1245,7 +1245,7 @@ void ZCCCompiler::AddConstant(ZCC_ConstantWork &constant)
 		// Create a dummy constant so we don't make any undefined value warnings.
 		def->Symbol = Create<PSymbolConstNumeric>(def->NodeName, TypeError, 0);
 	}
-	constant.Outputtable->ReplaceSymbol(def->Symbol);
+	constant.Outputtable->ReplaceSymbol(def->Symbol, def->SourceLump);
 }
 
 //==========================================================================
@@ -1344,7 +1344,7 @@ void ZCCCompiler::CompileArrays(ZCC_StructWork *work)
 				copyp += ztype->Align;
 			}
 		}
-		work->Type()->Symbols.AddSymbol(Create<PField>(sas->Id, NewArray(ztype, values.Size()), VARF_Static | VARF_ReadOnly, (size_t)destmem));
+		work->Type()->Symbols.AddSymbol(Create<PField>(sas->Id, NewArray(ztype, values.Size()), VARF_Static | VARF_ReadOnly, (size_t)destmem), sas->SourceLump);
 	}
 }
 
@@ -1687,9 +1687,9 @@ bool ZCCCompiler::CompileFields(PContainerType *type, TArray<ZCC_VarDeclarator *
 
 							// This is a global variable.
 							if (fd->BitValue != 0) thisfieldtype = fd->FieldSize == 1 ? TypeUInt8 : fd->FieldSize == 2 ? TypeUInt16 : TypeUInt32;
-							f = Create<PField>(name->Name, thisfieldtype, varflags | VARF_Native | VARF_Static, fd->FieldOffset, fd->BitValue);
+							f = Create<PField>(name->Name, thisfieldtype, varflags | VARF_Native | VARF_Static, fd->FieldOffset, field->SourceLump, fd->BitValue);
 
-							if (OutNamespace->Symbols.AddSymbol(f) == nullptr)
+							if (OutNamespace->Symbols.AddSymbol(f, field->SourceLump) == nullptr)
 							{ // name is already in use
 								if (type != nullptr)
 								{
@@ -2824,8 +2824,9 @@ void ZCCCompiler::CompileFunction(ZCC_StructWork *c, ZCC_FuncDeclarator *f, bool
 		}
 
 		PFunction *sym = Create<PFunction>(c->Type(), f->Name);
+		sym->mSourceFileNo = f->SourceLump;
 		sym->AddVariant(NewPrototype(rets, args), argflags, argnames, afd == nullptr ? nullptr : *(afd->VMPointer), varflags, useflags);
-		c->Type()->Symbols.ReplaceSymbol(sym);
+		c->Type()->Symbols.ReplaceSymbol(sym, f->SourceLump);
 
 		if (f->DeprecationMessage != nullptr)
 		{

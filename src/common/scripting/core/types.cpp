@@ -534,7 +534,7 @@ PContainerType::PContainerType(FName name, PTypeBase *outer, int fileno) : Outer
 	mDescriptiveName = name.GetChars();
 	Flags |= TYPE_Container;
 	mSourceFileNo = fileno;
-	mDefFileNo = fileSystem.GetFileContainer(fileno);
+	mDefFileNo = fileno <= 0 ? 0 : fileSystem.GetFileContainer(fileno);
 }
 
 //==========================================================================
@@ -2081,6 +2081,7 @@ template<OverrideFunctionRetType RetType, OverrideFunctionArgType ArgType , int 
 void CreateOverrideFunction(MT *self, FName name)
 {
 	auto Fn = Create<PFunction>(self->BackingType, name);
+	Fn->mSourceFileNo = self->mSourceFileNo;
 	auto NativeFn = FindFunction(self->BackingType, name.GetChars());
 
 	assert(NativeFn);
@@ -3385,7 +3386,7 @@ bool PStruct::ReadValue(FSerializer &ar, const char *key, void *addr) const
 PField *PStruct::AddField(FName name, PType *type, uint32_t flags)
 {
 	assert(type->Size > 0);
-	return Symbols.AddField(name, type, flags, Size, &Align, mDefFileNo);
+	return Symbols.AddField(name, type, flags, Size, &Align, mSourceFileNo);
 }
 
 //==========================================================================
@@ -3399,7 +3400,7 @@ PField *PStruct::AddField(FName name, PType *type, uint32_t flags)
 
 PField *PStruct::AddNativeField(FName name, PType *type, size_t address, uint32_t flags, int bitvalue)
 {
-	return Symbols.AddNativeField(name, type, address, flags, bitvalue, mDefFileNo);
+	return Symbols.AddNativeField(name, type, address, flags, bitvalue, mSourceFileNo);
 }
 
 //==========================================================================
@@ -3529,7 +3530,7 @@ PClassType::PClassType(PClass *cls, int fileno)
 	}
 	cls->VMType = this;
 	mSourceFileNo = fileno;
-	mDefFileNo = fileSystem.GetFileContainer(fileno);
+	mDefFileNo = fileno <= 0 ? 0 : fileSystem.GetFileContainer(fileno);
 	mDescriptiveName.Format("Class<%s>", cls->TypeName.GetChars());
 }
 
@@ -3541,7 +3542,7 @@ PClassType::PClassType(PClass *cls, int fileno)
 
 PField *PClassType::AddField(FName name, PType *type, uint32_t flags)
 {
-	return Descriptor->AddField(name, type, flags, mDefFileNo);
+	return Descriptor->AddField(name, type, flags, mSourceFileNo);
 }
 
 //==========================================================================
@@ -3552,7 +3553,7 @@ PField *PClassType::AddField(FName name, PType *type, uint32_t flags)
 
 PField *PClassType::AddNativeField(FName name, PType *type, size_t address, uint32_t flags, int bitvalue)
 {
-	auto field = Symbols.AddNativeField(name, type, address, flags, bitvalue, mDefFileNo);
+	auto field = Symbols.AddNativeField(name, type, address, flags, bitvalue, mSourceFileNo);
 	if (field != nullptr) Descriptor->Fields.Push(field);
 	return field;
 }

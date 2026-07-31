@@ -1091,6 +1091,7 @@ static void SetDehParams(FState *state, int codepointer, VMDisassemblyDumper &di
 
 		int numargs = sym->GetImplicitArgs();
 		auto funcsym = CreateAnonymousFunction(RUNTIME_CLASS(AActor)->VMType, returnsState? (PType*)TypeState : TypeVoid, numargs==3? SUF_ACTOR|SUF_WEAPON : SUF_ACTOR);
+		funcsym->mSourceFileNo = pstate->PatchFileNum;
 		VMFunctionBuilder buildit(numargs);
 		// Allocate registers used to pass parameters in.
 		// self, stateowner, state (all are pointers)
@@ -3786,7 +3787,6 @@ void FinishDehPatch ()
 	for (auto &[type, patchfilenum] : TouchedActors)
 	{
 		PClassActor *subclass;
-		// PClassActor *type = TouchedActors[touchedIndex];
 		AActor *defaults1 = GetDefaultByType (type);
 		if (!(defaults1->flags & MF_SPECIAL))
 		{ // We only need to do this for pickups

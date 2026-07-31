@@ -7523,7 +7523,7 @@ ExpEmit FxCVar::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxStackVariable::FxStackVariable(PType *type, int offset, const FScriptPosition &pos)
-	: FxMemberBase(EFX_StackVariable, Create<PField>(NAME_None, type, 0, offset), pos)
+	: FxMemberBase(EFX_StackVariable, Create<PField>(NAME_None, type, 0, offset, pos.LumpNum), pos)
 {
 }
 
@@ -7741,7 +7741,7 @@ FxExpression *FxStructMember::Resolve(FCompileContext &ctx)
 			auto parentfield = static_cast<FxMemberBase *>(classx)->membervar;
 			// PFields are garbage collected so this will be automatically taken care of later.
 			// [ZZ] call ChangeSideInFlags to ensure that we don't get ui+play
-			auto newfield = Create<PField>(NAME_None, membervar->Type, FScopeBarrier::ChangeSideInFlags(membervar->Flags | parentfield->Flags, BarrierSide), membervar->Offset + parentfield->Offset);
+			auto newfield = Create<PField>(NAME_None, membervar->Type, FScopeBarrier::ChangeSideInFlags(membervar->Flags | parentfield->Flags, BarrierSide), membervar->Offset + parentfield->Offset, parentfield->mSourceFileNo);
 			newfield->BitValue = membervar->BitValue;
 			newfield->mDefFileNo = membervar->mDefFileNo;
 			static_cast<FxMemberBase *>(classx)->membervar = newfield;
@@ -8033,7 +8033,7 @@ FxExpression *FxArrayElement::Resolve(FCompileContext &ctx)
 		{
 			auto parentfield = static_cast<FxMemberBase *>(Array)->membervar;
 			// PFields are garbage collected so this will be automatically taken care of later.
-			auto newfield = Create<PField>(NAME_None, elementtype, parentfield->Flags, indexval * arraytype->ElementSize + parentfield->Offset);
+			auto newfield = Create<PField>(NAME_None, elementtype, parentfield->Flags, indexval * arraytype->ElementSize + parentfield->Offset, parentfield->mSourceFileNo);
 			newfield->mDefFileNo = parentfield->mDefFileNo;
 			static_cast<FxMemberBase *>(Array)->membervar = newfield;
 			Array->isresolved = false;	// re-resolve the parent so it can also check if it can be optimized away.
@@ -8088,7 +8088,7 @@ ExpEmit FxArrayElement::Emit(VMFunctionBuilder *build)
 	{
 		bool ismeta = Array->ExprType == EFX_ClassMember && static_cast<FxClassMember*>(Array)->membervar->Flags & VARF_Meta;
 
-		auto f = Create<PField>(NAME_None, TypeUInt32, ismeta? VARF_Meta : 0, SizeAddr);
+		auto f = Create<PField>(NAME_None, TypeUInt32, ismeta? VARF_Meta : 0, SizeAddr, Array->ScriptPosition.LumpNum);
 		auto arraymemberbase = static_cast<FxMemberBase *>(Array);
 
 		if (Array->ExprType == EFX_StructMember || Array->ExprType == EFX_ClassMember)
@@ -9265,7 +9265,7 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 					if (Self->ExprType == EFX_StructMember || Self->ExprType == EFX_ClassMember || Self->ExprType == EFX_StackVariable)
 					{
 						auto member = static_cast<FxMemberBase*>(Self);
-						auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset);
+						auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset, member->membervar->mSourceFileNo);
 						newfield->mDefFileNo = member->membervar->mDefFileNo;
 						member->membervar = newfield;
 					}
@@ -9311,7 +9311,7 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 				if (Self->ExprType == EFX_StructMember || Self->ExprType == EFX_ClassMember || Self->ExprType == EFX_GlobalVariable)
 				{
 					auto member = static_cast<FxMemberBase*>(Self);
-					auto newfield = Create<PField>(NAME_None, TypeUInt32, VARF_ReadOnly, member->membervar->Offset + sizeof(void*));	// the size is stored right behind the pointer.
+					auto newfield = Create<PField>(NAME_None, TypeUInt32, VARF_ReadOnly, member->membervar->Offset + sizeof(void*), member->membervar->mSourceFileNo);	// the size is stored right behind the pointer.
 					newfield->mDefFileNo = member->membervar->mDefFileNo;
 					member->membervar = newfield;
 					Self = nullptr;
@@ -9403,7 +9403,7 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 				if (Self->ExprType == EFX_StructMember || Self->ExprType == EFX_ClassMember || Self->ExprType == EFX_StackVariable)
 				{
 					auto member = static_cast<FxMemberBase*>(Self);
-					auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset);
+					auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset, member->membervar->mSourceFileNo);
 					newfield->mDefFileNo = member->membervar->mDefFileNo;
 					member->membervar = newfield;
 				}
@@ -9498,7 +9498,7 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 				if (Self->ExprType == EFX_StructMember || Self->ExprType == EFX_ClassMember || Self->ExprType == EFX_StackVariable)
 				{
 					auto member = static_cast<FxMemberBase*>(Self);
-					auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset);
+					auto newfield = Create<PField>(NAME_None, backingtype, 0, member->membervar->Offset, member->membervar->mSourceFileNo);
 					newfield->mDefFileNo = member->membervar->mDefFileNo;
 					member->membervar = newfield;
 				}

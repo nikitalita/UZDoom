@@ -65,9 +65,11 @@ class PSymbol : public DObject
 public:
 	FName SymbolName;
 	VersionInfo mVersion = { 0,0,0 };
+	int mSourceFileNo = 0;
 
 protected:
 	PSymbol(FName name) { SymbolName = name; }
+	PSymbol(FName name, int lumpnum) { SymbolName = name; mSourceFileNo = lumpnum; }
 };
 
 // A VM function ------------------------------------------------------------
@@ -80,7 +82,7 @@ class PSymbolType : public PSymbol
 public:
 	PType *Type = nullptr;
 
-	PSymbolType(FName name, class PType *ty) : PSymbol(name), Type(ty) {}
+	PSymbolType(FName name, class PType *ty);
 	PSymbolType() : PSymbol(NAME_None) {}
 };
 
@@ -92,7 +94,7 @@ class PSymbolTreeNode : public PSymbol
 public:
 	struct ZCC_TreeNode *Node = nullptr;
 
-	PSymbolTreeNode(FName name, struct ZCC_TreeNode *node) : PSymbol(name), Node(node) {}
+	PSymbolTreeNode(FName name, struct ZCC_TreeNode *node);
 	PSymbolTreeNode() : PSymbol(NAME_None) {}
 };
 
@@ -104,7 +106,7 @@ class PField : public PSymbol
 	DECLARE_CLASS(PField, PSymbol);
 	HAS_OBJECT_POINTERS
 public:
-	PField(FName name, PType *type, uint32_t flags = 0, size_t offset = 0, int bitvalue = 0);
+	PField(FName name, PType *type, uint32_t flags = 0, size_t offset = 0, int lumpnum = 0, int bitvalue = 0);
 	VersionInfo GetVersion();
 
 	size_t Offset;
@@ -246,7 +248,7 @@ struct PSymbolTable
 	// Places the symbol in the table and returns a pointer to it or NULL if
 	// a symbol with the same name is already in the table. This symbol is
 	// not copied and will be freed when the symbol table is destroyed.
-	PSymbol *AddSymbol (PSymbol *sym);
+	PSymbol *AddSymbol (PSymbol *sym, int fileno = 0);
 	PField *AddField(FName name, PType *type, uint32_t flags, unsigned &Size, unsigned *Align = nullptr, int fileno = 0);
 	PField *AddNativeField(FName name, PType *type, size_t address, uint32_t flags, int bitvalue, int fileno = 0);
 	bool ReadFields(FSerializer &ar, void *addr, const char *TypeName) const;
@@ -254,7 +256,7 @@ struct PSymbolTable
 
 	// Similar to AddSymbol but always succeeds. Returns the symbol that used
 	// to be in the table with this name, if any.
-	void ReplaceSymbol(PSymbol *sym);
+	void ReplaceSymbol(PSymbol *sym, int fileno = 0);
 
 	void RemoveSymbol(PSymbol *sym);
 

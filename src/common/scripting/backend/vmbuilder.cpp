@@ -832,6 +832,7 @@ VMFunction *FFunctionBuildList::AddFunction(PNamespace *gnspc, const VersionInfo
 	it.Version = ver;
 	assert(it.Func->Variants.Size() == 1);
 	it.Func->Variants[0].Implementation = it.Function;
+	it.Func->mSourceFileNo = lumpnum;
 
 	// set prototype for named functions.
 	if (it.Func->SymbolName != NAME_None)
