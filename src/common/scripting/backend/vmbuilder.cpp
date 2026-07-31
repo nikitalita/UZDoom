@@ -894,7 +894,11 @@ void FFunctionBuildList::Build()
 				{
 					auto newcmpd = new FxCompoundStatement(item.Code->ScriptPosition);
 					newcmpd->Add(item.Code);
-					newcmpd->Add(new FxReturnStatement(nullptr, item.Code->ScriptPosition));
+					// Ensure that the return statement is logged at the end of the statement.
+					FScriptPosition pos = item.Code->ScriptPosition;
+					pos.ScriptLine = pos.EndScriptLine;
+					pos.ScriptColumn = pos.EndScriptColumn;
+					newcmpd->Add(new FxReturnStatement(nullptr, pos));
 					item.Code = newcmpd->Resolve(ctx);
 				}
 				else
