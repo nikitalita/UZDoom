@@ -115,7 +115,7 @@ static TArray<FSoundID> SoundMap;
 // Names of different actor types, in original Doom 2 order
 static TArray<PClassActor *> InfoNames;
 
-static PClassActor* FindInfoName(int index, bool mustexist = false)
+static PClassActor* FindInfoName(int index, bool mustexist, int sourcefileno)
 {
 	if (index < 0) return nullptr;
 	if (index < (int)InfoNames.Size()) return InfoNames[index];
@@ -126,8 +126,8 @@ static PClassActor* FindInfoName(int index, bool mustexist = false)
 		auto cls = PClass::FindActor(name);
 		if (!cls && !mustexist)
 		{
-			cls = static_cast<PClassActor*>(RUNTIME_CLASS(AActor)->CreateDerivedClass(name.GetChars(), (unsigned)sizeof(AActor)));
-			NewClassType(cls, -1);	// This needs a VM type to work as intended.
+			cls = static_cast<PClassActor*>(RUNTIME_CLASS(AActor)->CreateDerivedClass(name.GetChars(), (unsigned)sizeof(AActor), nullptr, sourcefileno));
+			NewClassType(cls, sourcefileno);	// This needs a VM type to work as intended.
 			cls->InitializeDefaults();
 			PClassActor::AllActorClasses.Push(cls);
 		}
@@ -249,7 +249,7 @@ struct MBFParamState
 	PClassActor* GetTypeArg(int i)
 	{
 		int num = (int)args[i];
-		return FindInfoName(num-1, true);
+		return FindInfoName(num-1, true, this->PatchFileNum);
 	}
 
 	FState* GetStateArg(int i)
@@ -363,7 +363,7 @@ DEFINE_FIELD_X(DehInfo, DehInfo, MaxHealth)
 // from the original actor's defaults. The original actor is then changed to
 // spawn the new class.
 
-TArray<PClassActor *> TouchedActors;
+TMap<PClassActor *, int> TouchedActors;
 
 TArray<uint32_t> UnchangedSpriteNames;
 bool changedStates;
@@ -500,8 +500,8 @@ inline double DEHToDouble(int64_t acsval)
 
 static void PushTouchedActor(PClassActor *cls)
 {
-	if (TouchedActors.Find(cls) == TouchedActors.Size())
-		TouchedActors.Push(cls);
+	if (TouchedActors.CheckKey(cls) == nullptr)
+		TouchedActors.Insert(cls, PatchFileNum);
 }
 
 
@@ -799,7 +799,7 @@ static void CreateMushroomFunc(FunctionCallEmitter &emitters, int value1, int va
 // misc1 = type (arg +0), misc2 = Z-pos (arg +2)
 static void CreateSpawnFunc(FunctionCallEmitter &emitters, int value1, int value2, MBFParamState* state)
 { // A_SpawnItem
-	auto p = FindInfoName(value1 - 1, true);
+	auto p = FindInfoName(value1 - 1, true, state->PatchFileNum);
 	if (p == nullptr)
 	{
 		I_Error("No class found for dehackednum %d!\n", value1+1);
@@ -1229,7 +1229,7 @@ static int PatchThing (int thingy, int flags)
 	type = NULL;
 	info = (AActor *)&dummy;
 	ednum = &dummyed;
-	auto thingytype = FindInfoName(thingy-1);
+	auto thingytype = FindInfoName(thingy-1, false, PatchFileNum);
 	if (thingytype == nullptr)
 	{
 		Printf ("Thing %d out of range or invalid.\n", thingy);
@@ -1382,7 +1382,7 @@ static int PatchThing (int thingy, int flags)
 		}
 		else if (linelen == 12 && stricmp(Line1, "dropped item") == 0)
 		{
-			auto drop = FindInfoName(val - 1);
+			auto drop = FindInfoName(val - 1, false, PatchFileNum);
 			if (drop)
 			{
 				FDropItem* di = (FDropItem*)ClassDataAllocator.Alloc(sizeof(FDropItem));
@@ -3783,10 +3783,10 @@ void FinishDehPatch ()
 	}
 	RemapAllSprites();
 
-	for (touchedIndex = 0; touchedIndex < TouchedActors.Size(); ++touchedIndex)
+	for (auto &[type, patchfilenum] : TouchedActors)
 	{
 		PClassActor *subclass;
-		PClassActor *type = TouchedActors[touchedIndex];
+		// PClassActor *type = TouchedActors[touchedIndex];
 		AActor *defaults1 = GetDefaultByType (type);
 		if (!(defaults1->flags & MF_SPECIAL))
 		{ // We only need to do this for pickups
@@ -3802,7 +3802,7 @@ void FinishDehPatch ()
 			// Retry until we find a free name. This is unlikely to happen but not impossible.
 			mysnprintf(typeNameBuilder, countof(typeNameBuilder), "DehackedPickup%d", nameindex++);
 			bool newlycreated;
-			subclass = static_cast<PClassActor *>(dehtype->CreateDerivedClass(typeNameBuilder, dehtype->Size, &newlycreated, 0));
+			subclass = static_cast<PClassActor *>(dehtype->CreateDerivedClass(typeNameBuilder, dehtype->Size, &newlycreated, patchfilenum));
 			if (newlycreated)
 			{
 				subclass->InitializeDefaults();
@@ -3810,7 +3810,7 @@ void FinishDehPatch ()
 			}
 		}
 		while (subclass == nullptr);
-		NewClassType(subclass, 0);	// This needs a VM type to work as intended.
+		NewClassType(subclass, patchfilenum);	// This needs a VM type to work as intended.
 
 		AActor *defaults2 = GetDefaultByType (subclass);
 		memcpy ((void *)defaults2, (void *)defaults1, sizeof(AActor));
@@ -3856,7 +3856,7 @@ void FinishDehPatch ()
 		}
 	}
 	UnloadDehSupp();
-	TouchedActors.Reset();
+	TouchedActors.Clear();
 	EnglishStrings.Clear();
 	GStrings.SetOverrideStrings(DehStrings);
 	DehStrings.Clear();

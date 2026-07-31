@@ -93,6 +93,7 @@ public:
 	uint8_t				*Meta = nullptr;			// Per-class static script data
 	unsigned			 Size = sizeof(DObject);
 	unsigned			 MetaSize = 0;
+	int					 mSourceFileNo = 0;
 	FName				 TypeName = NAME_None;
 	FName				 SourceLumpName = NAME_None;
 	bool				 bRuntimeClass = false;	// class was defined at run-time, not compile-time

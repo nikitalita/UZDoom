@@ -128,6 +128,7 @@ public:
 	unsigned int	Flags = 0;		// What is this type?
 	PType			*HashNext;		// next type in this type table
 	PSymbolTable	Symbols;
+	int				mSourceFileNo = 0;
 	bool			MemberOnly = false;		// type may only be used as a struct/class member but not as a local variable or function argument.
 	FString			mDescriptiveName;
 	VersionInfo		mVersion = { 0,0,0 };
@@ -144,7 +145,7 @@ public:
 	PType * SetLocalType(PType * LocalType) { this->LocalType = LocalType; return this; }
 	PType * GetLocalType() { return LocalType ? LocalType : this; }
 
-	PType(unsigned int size = 1, unsigned int align = 1);
+	PType(unsigned int size = 1, unsigned int align = 1, int fileno = 0);
 	virtual ~PType();
 	virtual bool isNumeric() { return false; }
 
@@ -295,11 +296,7 @@ public:
 		mDescriptiveName = "ContainerType";
 		Flags |= TYPE_Container;
 	}
-	PContainerType(FName name, PTypeBase *outer, int fileno) : Outer(outer), TypeName(name), mDefFileNo(fileno)
-	{
-		mDescriptiveName = name.GetChars();
-		Flags |= TYPE_Container;
-	}
+	PContainerType(FName name, PTypeBase *outer, int fileno);
 
 	virtual bool IsMatch(intptr_t id1, intptr_t id2) const;
 	virtual void GetTypeIDs(intptr_t &id1, intptr_t &id2) const;
@@ -520,7 +517,7 @@ public:
 class PEnum : public PInt
 {
 public:
-	PEnum(FName name, PTypeBase *outer);
+	PEnum(FName name, PTypeBase *outer, int fileno);
 
 	PTypeBase *Outer;
 	FName EnumName;
@@ -738,7 +735,7 @@ PFunctionPointer *NewFunctionPointer(PPrototype * proto, TArray<uint32_t> && arg
 PPointer *NewPointer(PType *type, bool isconst = false);
 PPointer *NewPointer(PClass *type, bool isconst = false);
 PClassPointer *NewClassPointer(PClass *restrict);
-PEnum *NewEnum(FName name, PTypeBase *outer);
+PEnum *NewEnum(FName name, PTypeBase *outer, int fileno);
 PStruct *NewStruct(FName name, PTypeBase *outer, bool native = false, int fileno = 0);
 PPrototype *NewPrototype(const TArray<PType *> &rettypes, const TArray<PType *> &argtypes);
 PClassType *NewClassType(PClass *cls, int fileno);

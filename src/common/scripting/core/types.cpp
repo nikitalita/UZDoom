@@ -123,8 +123,8 @@ void DumpTypeTable()
 //
 //==========================================================================
 
-PType::PType(unsigned int size, unsigned int align)
-: Size(size), Align(align), HashNext(nullptr)
+PType::PType(unsigned int size, unsigned int align, int fileno)
+: Size(size), Align(align), HashNext(nullptr), mSourceFileNo(fileno)
 {
 	mDescriptiveName = "Type";
 	loadOp = OP_NOP;
@@ -522,6 +522,20 @@ PCompoundType::PCompoundType(unsigned int size, unsigned int align)
 }
 
 /* PContainerType *************************************************************/
+
+//==========================================================================
+//
+// PContainerType Parameterized Constructor
+//
+//==========================================================================
+
+PContainerType::PContainerType(FName name, PTypeBase *outer, int fileno) : Outer(outer), TypeName(name)
+{
+	mDescriptiveName = name.GetChars();
+	Flags |= TYPE_Container;
+	mSourceFileNo = fileno;
+	mDefFileNo = fileSystem.GetFileContainer(fileno);
+}
 
 //==========================================================================
 //
@@ -1767,11 +1781,12 @@ PClassPointer *NewClassPointer(PClass *restrict)
 //
 //==========================================================================
 
-PEnum::PEnum(FName name, PTypeBase *outer)
+PEnum::PEnum(FName name, PTypeBase *outer, int fileno)
 : PInt(4, false), Outer(outer), EnumName(name)
 {
 	Flags |= TYPE_IntNotInt;
 	mDescriptiveName.Format("Enum<%s>", name.GetChars());
+	mSourceFileNo = fileno;
 }
 
 //==========================================================================
@@ -1783,14 +1798,14 @@ PEnum::PEnum(FName name, PTypeBase *outer)
 //
 //==========================================================================
 
-PEnum *NewEnum(FName name, PTypeBase *outer)
+PEnum *NewEnum(FName name, PTypeBase *outer, int fileno)
 {
 	size_t bucket;
 	if (outer == nullptr) outer = Namespaces.GlobalNamespace;
 	PType *etype = TypeTable.FindType(NAME_Enum, (intptr_t)outer, name.GetIndex(), &bucket);
 	if (etype == nullptr)
 	{
-		etype = new PEnum(name, outer);
+		etype = new PEnum(name, outer, fileno);
 		TypeTable.AddType(etype, NAME_Enum, (intptr_t)outer, name.GetIndex(), bucket);
 	}
 	return static_cast<PEnum *>(etype);
@@ -3513,7 +3528,8 @@ PClassType::PClassType(PClass *cls, int fileno)
 		ScopeFlags = ParentType->ScopeFlags;
 	}
 	cls->VMType = this;
-	mDefFileNo = fileno;
+	mSourceFileNo = fileno;
+	mDefFileNo = fileSystem.GetFileContainer(fileno);
 	mDescriptiveName.Format("Class<%s>", cls->TypeName.GetChars());
 }
 

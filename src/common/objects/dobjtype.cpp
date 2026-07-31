@@ -600,6 +600,7 @@ PClass *PClass::CreateDerivedClass(FName name, unsigned int size, bool *newlycre
 	type->bRuntimeClass = true;
 	Derive(type, name);
 	type->Size = size;
+	mSourceFileNo = fileno;
 	if (size != TentativeClass)
 	{
 		NewClassType(type, fileno);
