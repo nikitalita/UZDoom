@@ -459,7 +459,7 @@ void FMapInfoParser::ParseGameInfo()
 
 		else
 		{
-			DPrintf(DMSG_ERROR, "Unknown GAMEINFO key \"%s\" found in %s:%i\n", nextKey.GetChars(), sc.ScriptName.GetChars(), sc.Line);
+			DPrintf(DMSG_ERROR, "Unknown GAMEINFO key \"%s\" found in %s:%i\n", nextKey.GetChars(), sc.ScriptName.GetChars(), sc.Loc.Line);
 
 			// ignore unkown keys.
 			sc.UnGet();

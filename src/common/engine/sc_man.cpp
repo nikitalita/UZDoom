@@ -211,14 +211,22 @@ void FScanner::PrepareScript ()
 
 	ScriptPtr = ScriptBuffer.GetChars();
 	ScriptEndPtr = ScriptBuffer.GetChars() + ScriptBuffer.Len();
-	Line = 1;
+	TokLineStartPtr = ScriptPtr;
+	CurLineStartPtr = ScriptPtr;
+	Loc.Line = 1;
+	Loc.Column = 1;
+	Loc.EndLine = 1;
+	Loc.EndColumn = 1;
 	End = false;
 	ScriptOpen = true;
 	String = StringBuffer;
 	AlreadyGot = false;
 	LastGotToken = false;
 	LastGotPtr = NULL;
-	LastGotLine = 1;
+	LastGotLoc.Line = 1;
+	LastGotLoc.Column = 1;
+	LastGotLoc.EndLine = 1;
+	LastGotLoc.EndColumn = 1;
 	CMode = false;
 	Escape = true;
 	StateMode = 0;
@@ -264,7 +272,9 @@ const FScanner::SavedPos FScanner::SavePos ()
 	{
 		pos.SavedScriptPtr = ScriptPtr;
 	}
-	pos.SavedScriptLine = Line;
+	pos.SavedLoc = Loc;
+	pos.SavedTokLineStartPtr = TokLineStartPtr;
+	pos.SavedCurLineStartPtr = CurLineStartPtr;
 	return pos;
 }
 
@@ -281,7 +291,9 @@ void FScanner::RestorePos (const FScanner::SavedPos &pos)
 	if (pos.SavedScriptPtr)
 	{
 		ScriptPtr = pos.SavedScriptPtr;
-		Line = pos.SavedScriptLine;
+		Loc = pos.SavedLoc;
+		TokLineStartPtr = pos.SavedTokLineStartPtr;
+		CurLineStartPtr = pos.SavedCurLineStartPtr;
 		End = false;
 	}
 	else
@@ -401,7 +413,9 @@ bool FScanner::ScanString (bool tokens)
 			return true;
 		}
 		ScriptPtr = LastGotPtr;
-		Line = LastGotLine;
+		TokLineStartPtr = LastGotTokLineStartPtr;
+		CurLineStartPtr = LastGotCurLineStartPtr;
+		Loc = LastGotLoc;
 	}
 
 	Crossed = false;
@@ -412,7 +426,9 @@ bool FScanner::ScanString (bool tokens)
 	}
 
 	LastGotPtr = ScriptPtr;
-	LastGotLine = Line;
+	LastGotTokLineStartPtr = TokLineStartPtr;
+	LastGotCurLineStartPtr = CurLineStartPtr;
+	LastGotLoc = Loc;
 
 	// In case the generated scanner does not use marker, avoid compiler warnings.
 	// marker;
@@ -860,7 +876,7 @@ void FScanner::MustGetFloat (bool evaluate)
 void FScanner::UnGet ()
 {
 	AlreadyGot = true;
-	AlreadyGotLine = LastGotLine;	// in case of an error we want the line of the last token.
+	AlreadyGotLoc = LastGotLoc;	// in case of an error we want the line of the last token.
 }
 
 //==========================================================================
@@ -1049,9 +1065,29 @@ FString FScanner::TokenName (int token, const char *string)
 //
 //==========================================================================
 
-int FScanner::GetMessageLine()
+const ScriptLoc& FScanner::GetMessageLoc() const
 {
-	return AlreadyGot? AlreadyGotLine : Line;
+	return AlreadyGot? AlreadyGotLoc : Loc;
+}
+
+int FScanner::GetMessageLine() const
+{
+	return AlreadyGot? AlreadyGotLoc.Line : Loc.Line;
+}
+
+int FScanner::GetMessageColumn() const
+{
+	return AlreadyGot? AlreadyGotLoc.Column : Loc.Column;
+}
+
+int FScanner::GetMessageEndLine() const
+{
+	return AlreadyGot? AlreadyGotLoc.EndLine : Loc.EndLine;
+}
+
+int FScanner::GetMessageEndColumn() const
+{
+	return AlreadyGot? AlreadyGotLoc.EndColumn : Loc.EndColumn;
 }
 
 //==========================================================================
@@ -1080,11 +1116,11 @@ void FScanner::ScriptError (const char *message, ...)
 	if (NoFatalErrors)
 	{
 		Printf(TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-			AlreadyGot ? AlreadyGotLine : Line, composed.GetChars());
+			GetMessageLine(), composed.GetChars());
 		return;
 	}
 	I_Error ("%sScript error, \"%s\" line %d:\n%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-		AlreadyGot? AlreadyGotLine : Line, composed.GetChars());
+		GetMessageLine(), composed.GetChars());
 }
 
 //==========================================================================
@@ -1111,7 +1147,7 @@ void FScanner::ScriptMessage (const char *message, ...)
 
 	ParseError = true;
 	Printf (TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-		AlreadyGot? AlreadyGotLine : Line, composed.GetChars());
+		GetMessageLine(), composed.GetChars());
 }
 
 //==========================================================================
@@ -1242,22 +1278,42 @@ bool FScriptPosition::StrictErrors;	// makes all OPTERROR messages real errors.
 bool FScriptPosition::errorout;		// call I_Error instead of printing the error itself.
 
 
-FScriptPosition::FScriptPosition(FString fname, int line)
+FScriptPosition::FScriptPosition(FString fname, int line, int column, int endline, int endcolumn)
 {
 	FileName = fname;
 	ScriptLine = line;
+	ScriptColumn = column;
+	if (endline == 0) endline = line;
+	if (endcolumn == 0) endcolumn = column;
+	EndScriptLine = endline;
+	EndScriptColumn = endcolumn;
+}
+
+FScriptPosition::FScriptPosition(FString fname, const ScriptLoc &loc)
+{
+	FileName = fname;
+	ScriptLine = loc.Line;
+	ScriptColumn = loc.Column;
+	EndScriptLine = loc.EndLine;
+	EndScriptColumn = loc.EndColumn;
 }
 
 FScriptPosition::FScriptPosition(FScanner &sc)
 {
 	FileName = sc.ScriptName;
 	ScriptLine = sc.GetMessageLine();
+	ScriptColumn = sc.GetMessageColumn();
+	EndScriptLine = sc.GetMessageEndLine();
+	EndScriptColumn = sc.GetMessageEndColumn();
 }
 
 FScriptPosition &FScriptPosition::operator=(FScanner &sc)
 {
 	FileName = sc.ScriptName;
 	ScriptLine = sc.GetMessageLine();
+	ScriptColumn = sc.GetMessageColumn();
+	EndScriptLine = sc.GetMessageEndLine();
+	EndScriptColumn = sc.GetMessageEndColumn();
 	return *this;
 }
 

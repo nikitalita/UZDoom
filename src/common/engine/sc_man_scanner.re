@@ -51,6 +51,9 @@
 
 std1:
 	tok = YYCURSOR;
+	TokLineStartPtr = CurLineStartPtr;
+	Loc.Column = Loc.EndColumn;
+	Loc.Line = Loc.EndLine;
 std2:
 /*!re2c
 	any	= [\000-\377];
@@ -75,6 +78,7 @@ std2:
 	TOKC2 = (NWS\STOPC);
 */
 #define RET(x)	TokenType = (x); goto normal_token;
+#define NEXT_LINE(cur) {CurLineStartPtr = cur; Loc.EndLine++; Loc.EndColumn = 1;}
 	if (tokens && StateMode != 0)
 	{
 	/*!re2c
@@ -393,7 +397,7 @@ comment:
 				return_val = false;
 				goto end;
 			}
-			Line++;
+			NEXT_LINE(YYCURSOR);
 			Crossed = true;
 			goto comment;
 		}
@@ -407,13 +411,15 @@ newline:
 		return_val = false;
 		goto end;
 	}
-	Line++;
+	NEXT_LINE(YYCURSOR);
 	Crossed = true;
 	goto std1;
 
 normal_token:
 	ScriptPtr = (YYCURSOR >= YYLIMIT) ? ScriptEndPtr : cursor;
 	StringLen = int(ScriptPtr - tok);
+	Loc.EndColumn = int(ScriptPtr - CurLineStartPtr) + 1;
+	Loc.Column = int(tok - TokLineStartPtr) + 1;
 	if (tokens && (TokenType == TK_StringConst || TokenType == TK_NameConst))
 	{
 		StringLen -= 2;
@@ -467,7 +473,7 @@ normal_token:
 string_const:
 	for (const char *c = tok; c < YYCURSOR; ++c)
 	{
-		if (*c == '\n') ++Line;
+		if (*c == '\n') { NEXT_LINE(c + 1); }
 	}
 	RET(TK_StringConst);
 
@@ -507,7 +513,7 @@ string:
 					StringLen--;		// overwrite the \ character with \n
 				}
 			}
-			Line++;
+			NEXT_LINE(cursor + 1);
 			Crossed = true;
 		}
 		if (StringLen == MAX_STRING_SIZE)
@@ -531,3 +537,8 @@ string:
 	ScriptPtr = cursor + 1;
 	return_val = true;
 end:
+	if (YYCURSOR >= YYLIMIT)
+	{
+		Loc.Line = Loc.EndLine;
+		Loc.Column = Loc.EndColumn;
+	}
