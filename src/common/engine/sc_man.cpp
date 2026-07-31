@@ -1115,12 +1115,12 @@ void FScanner::ScriptError (const char *message, ...)
 	ParseError = true;
 	if (NoFatalErrors)
 	{
-		Printf(TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-			GetMessageLine(), composed.GetChars());
+		Printf(TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:%d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
+			GetMessageLine(), GetMessageColumn(), composed.GetChars());
 		return;
 	}
-	I_Error ("%sScript error, \"%s\" line %d:\n%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-		GetMessageLine(), composed.GetChars());
+	I_Error ("%sScript error, \"%s\" line %d:%d:\n%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
+		GetMessageLine(), GetMessageColumn(), composed.GetChars());
 }
 
 //==========================================================================
@@ -1146,8 +1146,8 @@ void FScanner::ScriptMessage (const char *message, ...)
 	}
 
 	ParseError = true;
-	Printf (TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
-		GetMessageLine(), composed.GetChars());
+	Printf (TEXTCOLOR_RED "%sScript error, \"%s\"" TEXTCOLOR_RED " line %d:%d:\n" TEXTCOLOR_RED "%s\n", PrependMessage.GetChars(), ScriptName.GetChars(),
+		GetMessageLine(), GetMessageColumn(), composed.GetChars());
 }
 
 //==========================================================================
@@ -1386,12 +1386,12 @@ void FScriptPosition::Message (int severity, const char *message, ...) const
 		break;
 
 	case MSG_FATAL:
-		I_Error ("Script error, \"%s\" line %d:\n%s\n",
-			FileName.GetChars(), ScriptLine, composed.GetChars());
+		I_Error ("Script error, \"%s\" line %d:%d:\n%s\n",
+			FileName.GetChars(), ScriptLine, ScriptColumn, composed.GetChars());
 		return;
 	}
-	Printf (level, "%sScript %s, \"%s\" line %d:\n%s%s\n",
-		color, type, FileName.GetChars(), ScriptLine, color, composed.GetChars());
+	Printf (level, "%sScript %s, \"%s\" line %d:%d:\n%s%s\n",
+		color, type, FileName.GetChars(), ScriptLine, ScriptColumn, color, composed.GetChars());
 }
 
 //==========================================================================
