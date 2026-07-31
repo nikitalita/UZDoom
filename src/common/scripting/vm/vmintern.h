@@ -496,7 +496,7 @@ class VMScriptFunction : public VMFunction
 public:
 	static constexpr FStatementInfo InvalidStatementInfo = { 0, 0, 0, 0, 0 };
 
-	VMScriptFunction(FName name = NAME_None);
+	VMScriptFunction(FName name, int fileno);
 	~VMScriptFunction();
 	void Alloc(int numops, int numkonstd, int numkonstf, int numkonsts, int numkonsta, int numlinenumbers);
 

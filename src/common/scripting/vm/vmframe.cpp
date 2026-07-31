@@ -66,7 +66,7 @@ IMPLEMENT_CLASS(VMException, false, false)
 #endif
 
 TArray<VMFunction *> VMFunction::AllFunctions;
-
+VMFunction::MapType VMFunction::FileToFunctionMap;
 // Creates the register type list for a function.
 // Native functions only need this to assert their parameters in debug mode, script functions use this to load their registers from the VMValues.
 void VMFunction::CreateRegUse()
@@ -110,9 +110,13 @@ void VMFunction::CreateRegUse()
 	}
 }
 
-VMScriptFunction::VMScriptFunction(FName name)
+VMScriptFunction::VMScriptFunction(FName name, int fileno) : VMFunction(name)
 {
-	Name = name;
+	if (fileno > 0)
+	{
+		SourceFileName = fileSystem.GetFileFullName(fileno);
+		VMFunction::FileToFunctionMap.TryEmplace(fileno, TArray<VMFunction *>()).Push(this);
+	}
 	LineInfo = nullptr;
 	Code = NULL;
 	KonstD = NULL;

@@ -242,6 +242,7 @@ struct MBFParamState
 	int pointer;
 	int argsused;
 	int64_t* args;
+	int PatchFileNum;
 	FString PatchName;
 	int SourceLineNumber;
 
@@ -425,6 +426,7 @@ static char *Line1, *Line2;
 static int	 dversion, pversion;
 static bool  including, includenotext;
 static int LumpFileNum;
+static int PatchFileNum;
 
 static const char *unknown_str = "Unknown key %s encountered in %s %d.\n";
 
@@ -1107,7 +1109,7 @@ static void SetDehParams(FState *state, int codepointer, VMDisassemblyDumper &di
 		where.Free(&buildit);
 
 		// Attach it to the state.
-		VMScriptFunction *sfunc = new VMScriptFunction;
+		VMScriptFunction *sfunc = new VMScriptFunction(funcsym->SymbolName, pstate->PatchFileNum);
 		funcsym->Variants[0].Implementation = sfunc;
 		sfunc->SourceFileName = pstate->PatchName;
 		sfunc->Proto = funcsym->Variants[0].Proto;
@@ -2419,6 +2421,7 @@ static int SetPointer(FState *state, PFunction *sym, int frame = 0)
 			if (sym->SymbolName == MBFCodePointers[i].name)
 			{
 				MBFParamState newstate = { state, int(i) };
+				newstate.PatchFileNum = PatchFileNum;
 				newstate.PatchName = PatchName;
 				newstate.SourceLineNumber = LineNumber;
 				return MBFParamStates.Push(newstate);
@@ -3254,6 +3257,8 @@ int D_LoadDehLumps(DehLumpSource source, int flags)
 
 bool D_LoadDehLump(int lumpnum, int flags)
 {
+	auto ps = PatchFileNum;
+	PatchFileNum = lumpnum;
 	auto ls = LumpFileNum;
 	LumpFileNum = fileSystem.GetFileContainer(lumpnum);
 
@@ -3265,6 +3270,7 @@ bool D_LoadDehLump(int lumpnum, int flags)
 	PatchFile[PatchSize] = '\0';		// terminate with a '\0' character
 	auto res = DoDehPatch(flags);
 	LumpFileNum = ls;
+	PatchFileNum = ps;
 
 	return res;
 }
