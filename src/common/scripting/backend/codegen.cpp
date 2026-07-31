@@ -2660,7 +2660,7 @@ ExpEmit FxPostIncrDecr::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxAssign::FxAssign(FxExpression *base, FxExpression *right, bool ismodify)
-: FxExpression(EFX_Assign, base->ScriptPosition), Base(base), Right(right), IsBitWrite(-1), IsModifyAssign(ismodify)
+: FxExpression(EFX_Assign, FScriptPosition::FromStartEnd(base->ScriptPosition, right->ScriptPosition)), Base(base), Right(right), IsBitWrite(-1), IsModifyAssign(ismodify)
 {
 	AddressRequested = false;
 	AddressWritable = false;
@@ -3189,7 +3189,7 @@ FxExpression *FxMultiAssignDecl::Resolve(FCompileContext &ctx)
 //==========================================================================
 
 FxBinary::FxBinary(int o, FxExpression *l, FxExpression *r)
-: FxExpression(EFX_Binary, l->ScriptPosition)
+: FxExpression(EFX_Binary, FScriptPosition::FromStartEnd(l->ScriptPosition, r->ScriptPosition))
 {
 	Operator=o;
 	left=l;
@@ -4932,7 +4932,7 @@ ExpEmit FxConcat::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxBinaryLogical::FxBinaryLogical(int o, FxExpression *l, FxExpression *r)
-: FxExpression(EFX_BinaryLogical, l->ScriptPosition)
+: FxExpression(EFX_BinaryLogical, FScriptPosition::FromStartEnd(l->ScriptPosition, r->ScriptPosition))
 {
 	Operator=o;
 	left=l;
@@ -5116,7 +5116,7 @@ ExpEmit FxBinaryLogical::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxDotCross::FxDotCross(int o, FxExpression *l, FxExpression *r)
-	: FxExpression(EFX_DotCross, l->ScriptPosition)
+	: FxExpression(EFX_DotCross, FScriptPosition::FromStartEnd(l->ScriptPosition, r->ScriptPosition))
 {
 	Operator = o;
 	left = l;
@@ -5183,7 +5183,7 @@ ExpEmit FxDotCross::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxTypeCheck::FxTypeCheck(FxExpression *l, FxExpression *r)
-	: FxExpression(EFX_TypeCheck, l->ScriptPosition)
+	: FxExpression(EFX_TypeCheck, FScriptPosition::FromStartEnd(l->ScriptPosition, r->ScriptPosition))
 {
 	left = l;
 	right = r;
@@ -5338,7 +5338,7 @@ ExpEmit FxDynamicCast::Emit(VMFunctionBuilder *build)
 //==========================================================================
 
 FxConditional::FxConditional(FxExpression *c, FxExpression *t, FxExpression *f)
-: FxExpression(EFX_Conditional, c->ScriptPosition)
+: FxExpression(EFX_Conditional, FScriptPosition::FromStartEnd(c->ScriptPosition, f->ScriptPosition))
 {
 	condition = c;
 	truex=t;
@@ -7893,7 +7893,7 @@ FxClassMember::FxClassMember(FxExpression *x, PField* mem, const FScriptPosition
 //==========================================================================
 
 FxArrayElement::FxArrayElement(FxExpression *base, FxExpression *_index, bool nob)
-:FxExpression(EFX_ArrayElement, base->ScriptPosition), noboundscheck(nob)
+:FxExpression(EFX_ArrayElement, FScriptPosition::FromStartEnd(base->ScriptPosition, _index->ScriptPosition)), noboundscheck(nob)
 {
 	Array=base;
 	index = _index;

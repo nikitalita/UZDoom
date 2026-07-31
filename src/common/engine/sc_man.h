@@ -357,6 +357,14 @@ struct FScriptPosition
 		WarnCounter = 0;
 		ErrorCounter = 0;
 	}
+	inline FScriptPosition GetStartOnly() const { FScriptPosition pos = *this; pos.EndScriptLine = ScriptLine; pos.EndScriptColumn = ScriptColumn; return pos; }
+	inline FScriptPosition GetEndOnly() const { FScriptPosition pos = *this; pos.ScriptLine = EndScriptLine; pos.ScriptColumn = EndScriptColumn; return pos; }
+	static inline FScriptPosition FromStartEnd(const FScriptPosition &start, const FScriptPosition &end) {
+		FScriptPosition pos = start;
+		pos.EndScriptLine = end.EndScriptLine;
+		pos.EndScriptColumn = end.EndScriptColumn;
+		return pos;
+	}
 };
 
 int ParseHex(const char* hex, FScriptPosition* sc);
