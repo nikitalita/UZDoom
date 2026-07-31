@@ -68,7 +68,7 @@ class BreakpointManager
 	bool AddBreakpointInfo(
 		const std::shared_ptr<Binary> &binary,
 		VMScriptFunction *function,
-		int line,
+		const FStatementInfo &lineInfo,
 		void *p_instrRef,
 		int offset,
 		BreakpointInfo::Type type,

@@ -275,6 +275,29 @@ int VMScriptFunction::PCToLine(const VMOP *pc)
 	return -1;
 }
 
+FStatementInfo VMScriptFunction::PCToStatementInfo(const VMOP *pc)
+{
+	int PCIndex = int(pc - Code);
+	if (LineInfoCount == 1) return LineInfo[0];
+	unsigned MaxIdx = 0;
+	for (unsigned i = 1; i < LineInfoCount; i++)
+	{
+		if (LineInfo[i].InstructionIndex > PCIndex)
+		{
+			return LineInfo[i - 1];
+		}
+		if (LineInfo[i].InstructionIndex > LineInfo[MaxIdx].InstructionIndex)
+		{
+			MaxIdx = i;
+		}
+	}
+	if (PCIndex < CodeSize)
+	{
+		return LineInfo[MaxIdx];
+	}
+	return FStatementInfo{ 0, 0, 0, 0, 0 };
+}
+
 TArray<VMLocalVariable> VMScriptFunction::GetLocalVariableBlocksAt(const VMOP *pc)
 {
 	TArray<VMLocalVariable> ret;

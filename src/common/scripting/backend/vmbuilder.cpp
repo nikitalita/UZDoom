@@ -90,9 +90,9 @@ void VMFunctionBuilder::BeginStatement(FxExpression *stmt)
 	// pop empty statement records.
 	while (LineNumbers.Size() > 0 && LineNumbers.Last().InstructionIndex == Code.Size()) LineNumbers.Pop();
 	// only add a new entry if the line number differs.
-	if (LineNumbers.Size() == 0 || stmt->ScriptPosition.ScriptLine != LineNumbers.Last().LineNumber)
+	if (LineNumbers.Size() == 0 || stmt->ScriptPosition.ScriptLine != LineNumbers.Last().LineNumber || stmt->ScriptPosition.ScriptColumn != LineNumbers.Last().ColumnNumber || stmt->ScriptPosition.EndScriptLine != LineNumbers.Last().EndLineNumber || stmt->ScriptPosition.EndScriptColumn != LineNumbers.Last().EndColumnNumber)
 	{
-		FStatementInfo si = { (uint16_t)Code.Size(), (uint16_t)stmt->ScriptPosition.ScriptLine };
+		FStatementInfo si = { (uint16_t)Code.Size(), (uint16_t)stmt->ScriptPosition.ScriptLine, (uint16_t)stmt->ScriptPosition.ScriptColumn, (uint16_t)stmt->ScriptPosition.EndScriptLine, (uint16_t)stmt->ScriptPosition.EndScriptColumn };
 		LineNumbers.Push(si);
 	}
 	StatementStack.Push(stmt);
@@ -106,7 +106,7 @@ void VMFunctionBuilder::EndStatement()
 	// Re-enter the previous statement.
 	if (StatementStack.Size() > 0)
 	{
-		FStatementInfo si = { (uint16_t)Code.Size(), (uint16_t)StatementStack.Last()->ScriptPosition.ScriptLine };
+		FStatementInfo si = { (uint16_t)Code.Size(), (uint16_t)StatementStack.Last()->ScriptPosition.ScriptLine, (uint16_t)StatementStack.Last()->ScriptPosition.ScriptColumn, (uint16_t)StatementStack.Last()->ScriptPosition.EndScriptLine, (uint16_t)StatementStack.Last()->ScriptPosition.EndScriptColumn };
 		LineNumbers.Push(si);
 	}
 }

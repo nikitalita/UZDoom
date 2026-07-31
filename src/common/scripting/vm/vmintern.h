@@ -373,6 +373,9 @@ struct FStatementInfo
 {
 	uint16_t InstructionIndex;
 	uint16_t LineNumber;
+	uint16_t ColumnNumber;
+	uint16_t EndLineNumber;
+	uint16_t EndColumnNumber;
 };
 
 class VMFrameStack
@@ -482,12 +485,17 @@ struct VMLocalVariable
 	int RegCount;
 	int RegNum;
 	int LineNumber;
+	int ColumnNumber;
+	int EndLineNumber;
+	int EndColumnNumber;
 	int StackOffset;
 };
 
 class VMScriptFunction : public VMFunction
 {
 public:
+	static constexpr FStatementInfo InvalidStatementInfo = { 0, 0, 0, 0, 0 };
+
 	VMScriptFunction(FName name = NAME_None);
 	~VMScriptFunction();
 	void Alloc(int numops, int numkonstd, int numkonstf, int numkonsts, int numkonsta, int numlinenumbers);
@@ -521,6 +529,7 @@ public:
 	void DestroyExtra(void *addr);
 	int AllocExtraStack(PType *type);
 	int PCToLine(const VMOP *pc);
+	FStatementInfo PCToStatementInfo(const VMOP *pc);
 	TArray<VMLocalVariable> GetLocalVariableBlocksAt(const VMOP *pc);
 
 private:

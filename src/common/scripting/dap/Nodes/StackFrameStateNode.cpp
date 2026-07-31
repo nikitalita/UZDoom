@@ -83,11 +83,13 @@ bool StackFrameStateNode::SerializeToProtocol(dap::StackFrame &stackFrame, PexCa
 		stackFrame.source = source;
 		if (m_stackFrame->PC)
 		{
-			int lineNumber = scriptFunction->PCToLine(m_stackFrame->PC);
-			if (lineNumber > 0)
+			auto si = scriptFunction->PCToStatementInfo(m_stackFrame->PC);
+			if (si.LineNumber > 0)
 			{
-				stackFrame.line = lineNumber;
-				stackFrame.column = 1;
+				stackFrame.line = si.LineNumber;
+				stackFrame.column = si.ColumnNumber;
+				stackFrame.endLine = si.EndLineNumber;
+				stackFrame.endColumn = si.EndColumnNumber;
 			}
 			stackFrame.instructionPointerReference = StringFormat("%p", m_stackFrame->PC);
 		}

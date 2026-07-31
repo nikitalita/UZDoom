@@ -502,9 +502,10 @@ PexCache::MakeInstruction(VMScriptFunction *func, int ref, const std::string &in
 	instruction->bytes = opcode;
 	instruction->comment = comment;
 	instruction->ref = ref;
-	instruction->line = func->PCToLine((const VMOP *)instruction->address);
+	auto si = func->PCToStatementInfo((const VMOP *)instruction->address);
+	instruction->line = si.LineNumber;
 	instruction->is_valid_bp = true;
-	instruction->endLine = instruction->line;
+	instruction->endLine = si.EndLineNumber;
 	instruction->pointed_symbol = pointed_symbol;
 	return instruction;
 }
