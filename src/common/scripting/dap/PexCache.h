@@ -28,10 +28,8 @@
 #include <dap/session.h>
 #include <mutex>
 #include <string>
-#include "Utilities.h"
 #include <range_map/range_map.h>
 #include <name.h>
-#include <shared_mutex>
 #include <vmintern.h>
 
 class PFunction;
@@ -56,13 +54,14 @@ struct Binary
 	using FunctionCodeMap = beneficii::range_map<void *, VMScriptFunction *>;
 
 private:
+	static constexpr uint8_t EMPTY_MD5[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	friend class PexCache;
 	std::string archiveName;
 	std::string archivePath;
 	std::string unqualifiedScriptPath;
-	std::string compiledPath;
 	std::string cachedSourceCode;
-	int lump;
+	uint8_t md5[16];
+	int lump = -1;
 	int scriptReference;
 	NameFunctionMap functions;
 	FunctionLineMap functionLineMap;
@@ -72,6 +71,7 @@ private:
 
 public:
 	std::pair<int, int> GetFunctionLineRange(const VMScriptFunction *functionName) const;
+	int GetLump() const;
 	std::string GetQualifiedPath() const;
 	dap::Source GetDapSource() const;
 	std::string GetArchiveName() const;
@@ -83,6 +83,8 @@ public:
 	bool HasFunctions() const;
 	bool HasFunctionLines() const;
 	void ProcessScriptFunction(const std::string &qualPath, VMFunction *vmfunc);
+	bool HasChangedOnDisk() const;
+	bool CheckChangedOnDisk();
 
 	Binary(const std::string &scriptPath, int lump);
 };
@@ -119,7 +121,7 @@ public:
 	void PrintOutAllLoadedScripts();
 	std::shared_ptr<Binary> GetScript(const dap::Source &source);
 
-	std::shared_ptr<Binary> GetScript(std::string fqsn);
+	std::shared_ptr<Binary> GetScript(const std::string &fqsn);
 	bool GetDecompiledSource(const dap::Source &source, std::string &decompiledSource);
 
 	bool GetDecompiledSource(const std::string &fqpn, std::string &decompiledSource);
@@ -137,13 +139,14 @@ public:
 	std::vector<VMFunction *> GetFunctionsAtAddress(void *address);
 
 	std::vector<dap::Module> GetModules();
+	static void GetMD5Hash(const char *src, size_t length, uint8_t *md5);
+	static bool GetSourceContent(int lump, std::string &decompiledSource);
 	private:
 	using scripts_lock = std::scoped_lock<std::recursive_mutex>;
 
 	int FindFunctionDeclaration(const std::shared_ptr<Binary> &source, const VMScriptFunction *func, int start_line_from_1);
 	bool GetOrCacheSource(BinaryPtr binary, std::string &decompiledSource);
 	uint64_t AddDisassemblyLines(VMScriptFunction *func, DisassemblyMap &instructions);
-	static bool GetSourceContent(const std::string &scriptPath, std::string &decompiledSource);
 
 	static void PopulateCodeMap(BinaryPtr binary, Binary::FunctionCodeMap &functionCodeMap);
 	static void PopulateFromPaths(const std::map<std::string, int> &scripts, BinaryMap &p_scripts, bool clobber = false);

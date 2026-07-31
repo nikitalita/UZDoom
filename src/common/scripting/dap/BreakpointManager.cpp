@@ -26,6 +26,7 @@
 #include "Utilities.h"
 #include "RuntimeEvents.h"
 #include "GameInterfaces.h"
+#include "boost_unordered.hpp"
 
 namespace DebugServer
 {
@@ -46,7 +47,7 @@ int BreakpointManager::AddInvalidBreakpoint(
 	breakpoint.source = source;
 	breakpoint.verified = false;
 	breakpoint.reason = "failed";
-	if (line)
+	if (line > 0)
 	{
 		breakpoint.line = line;
 	}
@@ -228,6 +229,14 @@ dap::ResponseOrError<dap::SetBreakpointsResponse> BreakpointManager::SetBreakpoi
 		}
 		return response;
 	}
+	if (binary->HasChangedOnDisk()) {
+		for (const auto &srcBreakpoint : srcBreakpoints)
+		{
+			addInvalidBreakpoint(srcBreakpoint.line, StringFormat("Script %s has been modified on disk", scriptPath.c_str()), false);
+		}
+		InvalidateBreakpointsForScript(binary->GetScriptRef());
+		return response;
+	}
 	int srcRef = binary->GetScriptRef();
 	for (const auto &srcBreakpoint : srcBreakpoints)
 	{
@@ -306,6 +315,8 @@ dap::ResponseOrError<dap::SetFunctionBreakpointsResponse> BreakpointManager::Set
 	ClearBreakpointsType(BreakpointInfo::Type::Function);
 	int bpointCount = 0;
 
+	boost::unordered_flat_set<int> scriptRefsToInvalidate;
+
 	for (const auto &breakpoint : breakpoints)
 	{
 		const std::string &fullFuncName = breakpoint.name;
@@ -341,21 +352,33 @@ dap::ResponseOrError<dap::SetFunctionBreakpointsResponse> BreakpointManager::Set
 		// script function
 		auto scriptFunction = dynamic_cast<VMScriptFunction *>(func);
 		auto scriptName = scriptFunction->SourceFileName.GetChars();
-		dap::Source source;
 		auto binary = m_pexCache->GetScript(scriptName);
 		if (!binary)
 		{
-			AddInvalidBreakpoint(response.breakpoints, 1, nullptr, StringFormat("Could not find script %s in loaded sources!", scriptName));
+			AddInvalidBreakpoint(response.breakpoints, -1, nullptr, StringFormat("Could not find script %s in loaded sources!", scriptName));
 			continue;
 		}
 		if (scriptFunction->LineInfoCount == 0)
 		{
-			AddInvalidBreakpoint(response.breakpoints, 1, nullptr, StringFormat("Could not find line info for function %s!", fullFuncName.c_str()), source);
+			AddInvalidBreakpoint(response.breakpoints, -1, nullptr, StringFormat("Could not find line info for function %s!", fullFuncName.c_str()), binary->GetDapSource());
+			continue;
+		}
+		if (binary->HasChangedOnDisk())
+		{
+			AddInvalidBreakpoint(response.breakpoints, -1, nullptr, StringFormat("Script %s has been modified on disk", scriptName), binary->GetDapSource());
+			scriptRefsToInvalidate.insert(binary->GetScriptRef());
 			continue;
 		}
 		auto instrRef = scriptFunction->Code;
 		auto lineInfo = scriptFunction->PCToStatementInfo(scriptFunction->Code);
 		AddBreakpointInfo(binary, scriptFunction, lineInfo, instrRef, 0, BreakpointInfo::Type::Function, response.breakpoints, fullFuncName);
+	}
+	if (!scriptRefsToInvalidate.empty())
+	{
+		for (auto scriptRef : scriptRefsToInvalidate)
+		{
+			InvalidateBreakpointsForScript(scriptRef);
+		}
 	}
 	return response;
 }
@@ -531,6 +554,7 @@ dap::ResponseOrError<dap::SetInstructionBreakpointsResponse> BreakpointManager::
 
 	dap::SetInstructionBreakpointsResponse response;
 	ClearBreakpointsType(BreakpointInfo::Type::Instruction);
+	boost::unordered_flat_set<int> scriptRefsToInvalidate;
 	for (unsigned int i = 0; i < breakpoints.size(); i++)
 	{
 		auto &bp = breakpoints[i];
@@ -555,15 +579,55 @@ dap::ResponseOrError<dap::SetInstructionBreakpointsResponse> BreakpointManager::
 
 			if (IsFunctionNative(func) || !scriptFunc)
 			{
-				AddInvalidBreakpoint(response.breakpoints, 1, address, StringFormat("Instruction breakpoints are not supported for native functions"));
+				AddInvalidBreakpoint(response.breakpoints, -1, address, StringFormat("Instruction breakpoints are not supported for native functions"));
 				continue;
 			}
 			auto binary = m_pexCache->GetScript(scriptFunc->SourceFileName.GetChars());
 			FStatementInfo lineInfo = scriptFunc->PCToStatementInfo((const VMOP *)address);
+			if (binary && binary->HasChangedOnDisk())
+			{
+				// Instruction breakpoints can still be set for changed scripts, but all the source lines will be invalid.
+				lineInfo.LineNumber = 0;
+				lineInfo.ColumnNumber = 0;
+				lineInfo.EndLineNumber = 0;
+				lineInfo.EndColumnNumber = 0;
+				// Ensure that we clear all the lines for the breakpoints for this script, as they will all be invalid.
+				scriptRefsToInvalidate.insert(binary->GetScriptRef());
+			}
 			AddBreakpointInfo(binary, scriptFunc, lineInfo, srcAddress, (int)offset, BreakpointInfo::Type::Instruction, response.breakpoints);
 		}
 	}
+	if (!scriptRefsToInvalidate.empty())
+	{
+		for (auto scriptRef : scriptRefsToInvalidate)
+		{
+			InvalidateBreakpointsForScript(scriptRef);
+		}
+	}
 	return response;
+}
+
+void BreakpointManager::InvalidateBreakpointsForScript(int scriptRef)
+{
+	ClearBreakpointsForScript(scriptRef, BreakpointInfo::Type::Line, true);
+	ClearBreakpointsForScript(scriptRef, BreakpointInfo::Type::Function, true);
+	{
+		WriteLock lock(m_breakpointsMutex);
+		for (auto &kv: m_breakpoints)
+		{
+			for (auto &bpoint : kv.second)
+			{
+				if (bpoint.type == BreakpointInfo::Type::Instruction && bpoint.ref == scriptRef && bpoint.bpoint.line.has_value())
+				{
+					bpoint.bpoint.line = {};
+					bpoint.bpoint.column = {};
+					bpoint.bpoint.endLine = {};
+					bpoint.bpoint.endColumn = {};
+					RuntimeEvents::EmitBreakpointChangedEvent(bpoint.bpoint, "changed");
+				}
+			}
+		}
+	}
 }
 
 }

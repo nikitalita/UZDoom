@@ -85,6 +85,7 @@ class BreakpointManager
 	void SetBPStoppedEventInfo(VMFrameStack *stack, dap::StoppedEvent &event);
 	private:
 
+	void InvalidateBreakpointsForScript(int scriptRef);
 	using BreakpointsMap = boost::unordered_flat_map<void *, std::vector<BreakpointInfo>>;
 	using NativeFunctionBreakpointsMap = boost::unordered_flat_map<std::string_view, BreakpointInfo, boost::hash<std::string_view>, ci_less>;
 
