@@ -3561,7 +3561,7 @@ FxExpression *ZCCCompiler::ConvertNode(ZCC_TreeNode *ast, bool substitute)
 		{
 			FArgumentList bumper;
 			ConvertNodeList(bumper, iter->LoopBumper);
-			FxCompoundStatement *bumps = new FxCompoundStatement(*ast);
+			FxCompoundStatement *bumps = new FxCompoundStatement(*iter->LoopBumper);
 			for (auto &ex : bumper)
 			{
 				bumps->Add(ex);
